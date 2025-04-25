@@ -1,0 +1,648 @@
+import React from 'react';
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
+import Papa from 'papaparse';
+
+interface TrainEntry {
+  id: number;
+  train_id: string;
+  departure_date: string;
+  from_city: string;
+  to_city: string;
+  class: string;
+  scheduled_time: string;
+  actual_time: string;
+  delay_minutes: number;
+  capacity: number;
+  occupancy: number;
+  revenue: number;
+  occupancyRate: number;
+  date: Date;
+  year: number;
+  month: number;
+  quarter: number;
+}
+
+interface DelayTrendItem {
+  month: string;
+  delay: number;
+  count: number;
+  avgDelay?: number;
+}
+
+interface TrainStats {
+  count: number;
+  totalRevenue: number;
+  avgOccupancyRate: number;
+  avgDelay: number;
+  delayTrend: DelayTrendItem[];
+}
+
+interface CityPairStats {
+  count: number;
+  totalRevenue: number;
+  avgDelay: number;
+}
+
+interface ClassStats {
+  count: number;
+  totalRevenue: number;
+  avgOccupancyRate: number;
+}
+
+interface SummaryStats {
+  totalRevenue: number;
+  averageOccupancyRate: number;
+  averageDelay: number;
+  trainStats: Record<string, TrainStats>;
+  cityPairStats: Record<string, CityPairStats>;
+  classStats: Record<string, ClassStats>;
+}
+
+interface TrainMetricDataItem {
+  train: string;
+  value: number;
+}
+
+interface DelayTrendDataItem {
+  month: string;
+  [key: string]: number | string;
+}
+
+interface CityPairDataItem {
+  cityPair: string;
+  avgDelay: number;
+  totalRevenue: number;
+}
+
+interface ClassDataItem {
+  name: string;
+  value: number;
+}
+
+const Dashboard: React.FC = () => {
+  const [data, setData] = React.useState<TrainEntry[]>([]);
+  const [isLoading, setIsLoading] = React.useState<boolean>(true);
+  const [summaryStats, setSummaryStats] = React.useState<SummaryStats>({
+    totalRevenue: 0,
+    averageOccupancyRate: 0,
+    averageDelay: 0,
+    trainStats: {},
+    cityPairStats: {},
+    classStats: {}
+  });
+  const [selectedMetric, setSelectedMetric] = React.useState<string>('occupancy');
+  const [selectedYear, setSelectedYear] = React.useState<string>('all');
+
+  // Colors for the charts
+  const COLORS = ['#7e57c2', '#4e7fff', '#b39ddb', '#64b5f6'];
+  const TRAIN_COLORS: Record<string, string> = {
+    'A': '#7e57c2',
+    'B': '#4e7fff',
+    'C': '#b39ddb',
+    'D': '#64b5f6'
+  };
+
+  React.useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Hardcode the CSV data instead of reading from file
+        const csvData = `id,train_id,departure_date,from_city,to_city,class,scheduled_time,actual_time,delay_minutes,capacity,occupancy,revenue
+1,"A","2023-01-23","Colombo","Ella","First","11:38:00","11:43:00",5,20,19,47500
+2,"B","2023-02-18","Ella","Colombo","Economy","22:50:00","22:56:00",6,90,83,41500
+3,"C","2023-03-15","Kandy","Ella","Economy","06:19:00","06:22:00",3,110,60,30000
+4,"D","2023-04-04","Ella","Kandy","First","15:59:00","15:59:00",0,18,10,25000`;
+        
+        const parsedData = Papa.parse(csvData, {
+          header: true,
+          dynamicTyping: true,
+          skipEmptyLines: true
+        });
+        
+        // Clean and transform the data
+        const cleanedData = parsedData.data.map((entry: any) => ({
+          ...entry,
+          occupancyRate: (entry.occupancy / entry.capacity) * 100,
+          date: new Date(entry.departure_date),
+          year: new Date(entry.departure_date).getFullYear(),
+          month: new Date(entry.departure_date).getMonth() + 1,
+          quarter: Math.floor((new Date(entry.departure_date).getMonth() / 3)) + 1
+        })) as TrainEntry[];
+        
+        setData(cleanedData);
+        
+        // Calculate summary statistics
+        calculateSummaryStats(cleanedData);
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
+  }, []);
+  
+  const calculateSummaryStats = (data: TrainEntry[]) => {
+    const stats: SummaryStats = {
+      totalRevenue: 0,
+      averageOccupancyRate: 0,
+      averageDelay: 0,
+      trainStats: {} as Record<string, TrainStats>,
+      cityPairStats: {} as Record<string, CityPairStats>,
+      classStats: {} as Record<string, ClassStats>
+    };
+    
+    // Initialize train stats
+    ['A', 'B', 'C', 'D'].forEach(train => {
+      stats.trainStats[train] = {
+        count: 0,
+        totalRevenue: 0,
+        avgOccupancyRate: 0,
+        avgDelay: 0,
+        delayTrend: []
+      };
+    });
+    
+    // Aggregate data
+    data.forEach((entry: TrainEntry) => {
+      // Overall stats
+      stats.totalRevenue += entry.revenue;
+      stats.averageOccupancyRate += entry.occupancyRate;
+      stats.averageDelay += entry.delay_minutes;
+      
+      // Train specific stats
+      const train = entry.train_id;
+      if (stats.trainStats[train]) {
+        stats.trainStats[train].count += 1;
+        stats.trainStats[train].totalRevenue += entry.revenue;
+        stats.trainStats[train].avgOccupancyRate += entry.occupancyRate;
+        stats.trainStats[train].avgDelay += entry.delay_minutes;
+        
+        // Track delay by month for trend analysis
+        const monthKey = `${entry.year}-${String(entry.month).padStart(2, '0')}`;
+        if (!stats.trainStats[train].delayTrend.find(d => d.month === monthKey)) {
+          stats.trainStats[train].delayTrend.push({
+            month: monthKey,
+            delay: entry.delay_minutes,
+            count: 1
+          });
+        } else {
+          const index = stats.trainStats[train].delayTrend.findIndex(d => d.month === monthKey);
+          stats.trainStats[train].delayTrend[index].delay += entry.delay_minutes;
+          stats.trainStats[train].delayTrend[index].count += 1;
+        }
+      }
+      
+      // City pair stats
+      const cityPair = `${entry.from_city}-${entry.to_city}`;
+      if (!stats.cityPairStats[cityPair]) {
+        stats.cityPairStats[cityPair] = {
+          count: 0,
+          totalRevenue: 0,
+          avgDelay: 0
+        };
+      }
+      stats.cityPairStats[cityPair].count += 1;
+      stats.cityPairStats[cityPair].totalRevenue += entry.revenue;
+      stats.cityPairStats[cityPair].avgDelay += entry.delay_minutes;
+      
+      // Class stats
+      if (!stats.classStats[entry.class]) {
+        stats.classStats[entry.class] = {
+          count: 0,
+          totalRevenue: 0,
+          avgOccupancyRate: 0
+        };
+      }
+      stats.classStats[entry.class].count += 1;
+      stats.classStats[entry.class].totalRevenue += entry.revenue;
+      stats.classStats[entry.class].avgOccupancyRate += entry.occupancyRate;
+    });
+    
+    // Calculate averages
+    stats.averageOccupancyRate = stats.averageOccupancyRate / data.length;
+    stats.averageDelay = stats.averageDelay / data.length;
+    
+    // Calculate averages for train stats
+    Object.keys(stats.trainStats).forEach(train => {
+      const count = stats.trainStats[train].count;
+      if (count > 0) {
+        stats.trainStats[train].avgOccupancyRate = stats.trainStats[train].avgOccupancyRate / count;
+        stats.trainStats[train].avgDelay = stats.trainStats[train].avgDelay / count;
+        
+        // Calculate average delay by month
+        stats.trainStats[train].delayTrend.forEach(month => {
+          month.avgDelay = month.delay / month.count;
+        });
+        
+        // Sort delay trend by month
+        stats.trainStats[train].delayTrend.sort((a, b) => a.month.localeCompare(b.month));
+      }
+    });
+    
+    // Calculate averages for city pair stats
+    Object.keys(stats.cityPairStats).forEach(cityPair => {
+      const count = stats.cityPairStats[cityPair].count;
+      if (count > 0) {
+        stats.cityPairStats[cityPair].avgDelay = stats.cityPairStats[cityPair].avgDelay / count;
+      }
+    });
+    
+    // Calculate averages for class stats
+    Object.keys(stats.classStats).forEach(cls => {
+      const count = stats.classStats[cls].count;
+      if (count > 0) {
+        stats.classStats[cls].avgOccupancyRate = stats.classStats[cls].avgOccupancyRate / count;
+      }
+    });
+    
+    setSummaryStats(stats);
+  };
+  
+  // Filter data based on selected year
+  const filteredData = selectedYear === 'all' 
+    ? data 
+    : data.filter((entry: TrainEntry) => entry.year === parseInt(selectedYear));
+  
+  // Prepare data for charts
+  const prepareTrainMetricData = (): TrainMetricDataItem[] => {
+    const result: TrainMetricDataItem[] = [];
+    
+    if (summaryStats && summaryStats.trainStats) {
+      Object.keys(summaryStats.trainStats).forEach(train => {
+        let value: number = 0;
+        
+        if (selectedMetric === 'occupancy') {
+          value = summaryStats.trainStats[train].avgOccupancyRate;
+        } else if (selectedMetric === 'delay') {
+          value = summaryStats.trainStats[train].avgDelay;
+        } else if (selectedMetric === 'revenue') {
+          value = summaryStats.trainStats[train].totalRevenue;
+        }
+        
+        result.push({
+          train,
+          value
+        });
+      });
+    }
+    
+    return result;
+  };
+  
+  const prepareDelayTrendData = (): DelayTrendDataItem[] => {
+    const result: DelayTrendDataItem[] = [];
+    
+    // Combine all months from all trains to get a complete list
+    const allMonths = new Set<string>();
+    if (summaryStats && summaryStats.trainStats) {
+      Object.keys(summaryStats.trainStats).forEach(train => {
+        summaryStats.trainStats[train].delayTrend.forEach(item => {
+          allMonths.add(item.month);
+        });
+      });
+    }
+    
+    // Create data points for all months and trains
+    const sortedMonths = Array.from(allMonths).sort();
+    sortedMonths.forEach((month: string) => {
+      const dataPoint: DelayTrendDataItem = { month };
+      
+      if (summaryStats && summaryStats.trainStats) {
+        Object.keys(summaryStats.trainStats).forEach(train => {
+          const monthData = summaryStats.trainStats[train].delayTrend.find(item => item.month === month);
+          dataPoint[train] = monthData && monthData.avgDelay !== undefined ? monthData.avgDelay : 0;
+        });
+      }
+      
+      result.push(dataPoint);
+    });
+    
+    return result;
+  };
+  
+  const prepareCityPairData = (): CityPairDataItem[] => {
+    const result: CityPairDataItem[] = [];
+    
+    if (summaryStats && summaryStats.cityPairStats) {
+      Object.keys(summaryStats.cityPairStats).forEach(cityPair => {
+        result.push({
+          cityPair,
+          avgDelay: summaryStats.cityPairStats[cityPair].avgDelay,
+          totalRevenue: summaryStats.cityPairStats[cityPair].totalRevenue
+        });
+      });
+      
+      // Sort by average delay
+      result.sort((a, b) => b.avgDelay - a.avgDelay);
+    }
+    
+    return result.slice(0, 5); // Top 5 city pairs by delay
+  };
+  
+  const prepareClassData = (): ClassDataItem[] => {
+    const result: ClassDataItem[] = [];
+    
+    if (summaryStats && summaryStats.classStats) {
+      Object.keys(summaryStats.classStats).forEach(cls => {
+        result.push({
+          name: cls,
+          value: summaryStats.classStats[cls].totalRevenue
+        });
+      });
+    }
+    
+    return result;
+  };
+  
+  if (isLoading) {
+    return <div className="text-center p-10 text-dashboard-text">Loading data...</div>;
+  }
+  
+  return (
+    <div className="p-4">
+      <div className="mb-4 px-2 flex justify-between items-center">
+        <h1 className="text-xl font-medium text-dashboard-header">Train Operations Dashboard</h1>
+        <div className="flex items-center space-x-4">
+          <div>
+            <label htmlFor="metricSelect" className="text-dashboard-subtext mr-2 text-sm">Metric:</label>
+            <select 
+              id="metricSelect"
+              className="bg-dashboard-dark text-dashboard-text border border-gray-700 rounded px-2 py-1 text-sm"
+              value={selectedMetric}
+              onChange={(e) => setSelectedMetric(e.target.value)}
+            >
+              <option value="occupancy">Occupancy Rate</option>
+              <option value="delay">Delay</option>
+              <option value="revenue">Revenue</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="yearSelect" className="text-dashboard-subtext mr-2 text-sm">Year:</label>
+            <select 
+              id="yearSelect"
+              className="bg-dashboard-dark text-dashboard-text border border-gray-700 rounded px-2 py-1 text-sm"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+            >
+              <option value="all">All Years</option>
+              <option value="2023">2023</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      {/* Main Dashboard Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* Train Schedule & Status Panel */}
+        <div className="bg-dashboard-panel rounded shadow p-4">
+          <h2 className="text-dashboard-header text-lg mb-4">Train Schedule & Status</h2>
+          
+          <div className="mb-4">
+            <h3 className="text-dashboard-subtext text-sm mb-2">Upcoming Departures</h3>
+            <div className="bg-dashboard-dark rounded p-2">
+              <table className="w-full text-dashboard-text text-sm">
+                <thead>
+                  <tr className="border-b border-gray-700">
+                    <th className="text-left py-2">Train</th>
+                    <th className="text-left py-2">Route</th>
+                    <th className="text-right py-2">Time</th>
+                    <th className="text-right py-2">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.slice(0, 2).map((train) => (
+                    <tr key={train.id}>
+                      <td className="py-2">{train.train_id}</td>
+                      <td className="py-2">{train.from_city} → {train.to_city}</td>
+                      <td className="py-2 text-right">{train.scheduled_time}</td>
+                      <td className={`py-2 text-right ${train.delay_minutes > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
+                        {train.delay_minutes > 0 ? `Delayed ${train.delay_minutes}m` : 'On Time'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <div className="mb-4">
+            <h3 className="text-dashboard-subtext text-sm mb-2">Delay by Train</h3>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={prepareTrainMetricData().filter(item => selectedMetric === 'delay')}>
+                <XAxis dataKey="train" stroke="#666" />
+                <YAxis stroke="#666" />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#282c3e', borderColor: '#444', color: '#e0e0e0' }}
+                  labelStyle={{ color: '#e0e0e0' }}
+                />
+                <Bar dataKey="value" name="Avg. Delay (minutes)">
+                  {prepareTrainMetricData().map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={TRAIN_COLORS[entry.train]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="mt-4">
+            <h3 className="text-dashboard-subtext text-sm mb-2">Route Performance</h3>
+            <div className="bg-dashboard-dark rounded p-2">
+              <table className="w-full text-dashboard-text text-sm">
+                <thead>
+                  <tr className="border-b border-gray-700">
+                    <th className="text-left py-2">Route</th>
+                    <th className="text-right py-2">Avg. Delay</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(summaryStats.cityPairStats).map(([cityPair, stats]) => (
+                    <tr key={cityPair}>
+                      <td className="py-2">{cityPair}</td>
+                      <td className="py-2 text-right">{stats.avgDelay.toFixed(1)} min</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        
+        {/* Ticket Sales & Revenue Panel */}
+        <div className="bg-dashboard-panel rounded shadow p-4">
+          <h2 className="text-dashboard-header text-lg mb-4">Ticket Sales & Revenue</h2>
+          
+          <div className="mb-4">
+            <h3 className="text-dashboard-subtext text-sm mb-2">Revenue by Train</h3>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={prepareTrainMetricData().filter(item => selectedMetric === 'revenue')}>
+                <XAxis dataKey="train" stroke="#666" />
+                <YAxis stroke="#666" />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#282c3e', borderColor: '#444', color: '#e0e0e0' }}
+                  labelStyle={{ color: '#e0e0e0' }}
+                />
+                <Bar dataKey="value" name="Revenue (LKR)">
+                  {prepareTrainMetricData().map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={TRAIN_COLORS[entry.train]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="mb-4">
+            <h3 className="text-dashboard-subtext text-sm mb-2">Revenue by Class</h3>
+            <ResponsiveContainer width="100%" height={180}>
+              <PieChart>
+                <Pie
+                  data={prepareClassData()}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={60}
+                  fill="#8884d8"
+                  dataKey="value"
+                  nameKey="name"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {prepareClassData().map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#282c3e', borderColor: '#444', color: '#e0e0e0' }}
+                  labelStyle={{ color: '#e0e0e0' }}
+                  formatter={(value) => `${value.toLocaleString()} LKR`}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="mt-4">
+            <h3 className="text-dashboard-subtext text-sm mb-2">Revenue Summary</h3>
+            <div className="bg-dashboard-dark rounded p-3">
+              <div className="flex justify-between mb-2">
+                <span className="text-dashboard-subtext">Total Revenue</span>
+                <span className="text-dashboard-text">{summaryStats.totalRevenue.toLocaleString()} LKR</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-dashboard-subtext">Avg. Revenue per Trip</span>
+                <span className="text-dashboard-text">
+                  {(summaryStats.totalRevenue / data.length).toLocaleString()} LKR
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Occupancy & Capacity Panel */}
+        <div className="bg-dashboard-panel rounded shadow p-4">
+          <h2 className="text-dashboard-header text-lg mb-4">Occupancy & Capacity</h2>
+          
+          <div className="mb-6">
+            <h3 className="text-dashboard-subtext text-sm mb-2">Overall Occupancy Rate</h3>
+            <div className="w-full bg-gray-700 rounded-full h-4 mb-4">
+              <div 
+                className="bg-green-400 h-4 rounded-full" 
+                style={{ width: `${summaryStats.averageOccupancyRate}%` }}
+              ></div>
+            </div>
+            
+            <div className="bg-dashboard-dark rounded">
+              <div className="grid grid-cols-2 border-b border-gray-700">
+                <div className="p-2 text-dashboard-subtext">Average Occupancy</div>
+                <div className="p-2 text-dashboard-text text-right">{summaryStats.averageOccupancyRate.toFixed(1)}%</div>
+              </div>
+              {Object.entries(summaryStats.trainStats).map(([train, stats]) => (
+                <div key={train} className="grid grid-cols-2 border-b border-gray-700">
+                  <div className="p-2 text-dashboard-subtext">Train {train}</div>
+                  <div className="p-2 text-dashboard-text text-right">{stats.avgOccupancyRate.toFixed(1)}%</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="mt-4">
+            <h3 className="text-dashboard-subtext text-sm mb-2">Occupancy by Train</h3>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={prepareTrainMetricData().filter(item => selectedMetric === 'occupancy')}>
+                <XAxis dataKey="train" stroke="#666" />
+                <YAxis stroke="#666" />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#282c3e', borderColor: '#444', color: '#e0e0e0' }}
+                  labelStyle={{ color: '#e0e0e0' }}
+                />
+                <Bar dataKey="value" name="Occupancy Rate (%)">
+                  {prepareTrainMetricData().map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={TRAIN_COLORS[entry.train]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        
+        {/* Performance Metrics Panel */}
+        <div className="bg-dashboard-panel rounded shadow p-4">
+          <h2 className="text-dashboard-header text-lg mb-4">Performance Metrics</h2>
+          
+          <div className="mb-6">
+            <h3 className="text-dashboard-subtext text-sm mb-2">Delay Trend</h3>
+            <ResponsiveContainer width="100%" height={180}>
+              <LineChart data={prepareDelayTrendData()}>
+                <XAxis dataKey="month" stroke="#666" />
+                <YAxis stroke="#666" />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#282c3e', borderColor: '#444', color: '#e0e0e0' }}
+                  labelStyle={{ color: '#e0e0e0' }}
+                />
+                <Legend />
+                {Object.keys(summaryStats.trainStats).map((train, index) => (
+                  <Line 
+                    key={train}
+                    type="monotone" 
+                    dataKey={train} 
+                    stroke={TRAIN_COLORS[train]} 
+                    name={`Train ${train}`} 
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="mt-4">
+            <h3 className="text-dashboard-subtext text-sm mb-2">Key Performance Indicators</h3>
+            <div className="bg-dashboard-dark rounded">
+              <div className="grid grid-cols-2 border-b border-gray-700">
+                <div className="p-2 text-dashboard-subtext">On-Time Performance</div>
+                <div className="p-2 text-dashboard-text text-right">
+                  {(data.filter(train => train.delay_minutes === 0).length / data.length * 100).toFixed(1)}%
+                </div>
+              </div>
+              <div className="grid grid-cols-2 border-b border-gray-700">
+                <div className="p-2 text-dashboard-subtext">Avg. Delay</div>
+                <div className="p-2 text-dashboard-text text-right">{summaryStats.averageDelay.toFixed(1)} min</div>
+              </div>
+              <div className="grid grid-cols-2 border-b border-gray-700">
+                <div className="p-2 text-dashboard-subtext">Total Trips</div>
+                <div className="p-2 text-dashboard-text text-right">{data.length}</div>
+              </div>
+              <div className="grid grid-cols-2">
+                <div className="p-2 text-dashboard-subtext">Total Passengers</div>
+                <div className="p-2 text-dashboard-text text-right">
+                  {data.reduce((sum, train) => sum + train.occupancy, 0)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;
