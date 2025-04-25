@@ -1,26 +1,9 @@
 import React from 'react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
-import Papa from 'papaparse';
+import { transformData, getAvailableYears, getUpcomingDepartures, TrainEntry as DataServiceTrainEntry } from '../services/dataService';
 
-interface TrainEntry {
-  id: number;
-  train_id: string;
-  departure_date: string;
-  from_city: string;
-  to_city: string;
-  class: string;
-  scheduled_time: string;
-  actual_time: string;
-  delay_minutes: number;
-  capacity: number;
-  occupancy: number;
-  revenue: number;
-  occupancyRate: number;
-  date: Date;
-  year: number;
-  month: number;
-  quarter: number;
-}
+// Rename to avoid conflict with imported type
+type TrainEntryType = DataServiceTrainEntry;
 
 interface DelayTrendItem {
   month: string;
@@ -80,8 +63,10 @@ interface ClassDataItem {
 }
 
 const Dashboard: React.FC = () => {
-  const [data, setData] = React.useState<TrainEntry[]>([]);
+  const [data, setData] = React.useState<TrainEntryType[]>([]);
   const [isLoading, setIsLoading] = React.useState<boolean>(true);
+  const [availableYears, setAvailableYears] = React.useState<number[]>([]);
+  const [upcomingDepartures, setUpcomingDepartures] = React.useState<any[]>([]);
   const [summaryStats, setSummaryStats] = React.useState<SummaryStats>({
     totalRevenue: 0,
     averageOccupancyRate: 0,
@@ -94,12 +79,16 @@ const Dashboard: React.FC = () => {
   const [selectedYear, setSelectedYear] = React.useState<string>('all');
 
   // Colors for the charts
-  const COLORS = ['#7e57c2', '#4e7fff', '#b39ddb', '#64b5f6'];
+  const COLORS = ['#7e57c2', '#4e7fff', '#b39ddb', '#64b5f6', '#9575cd', '#5c6bc0', '#7986cb', '#4fc3f7'];
   const TRAIN_COLORS: Record<string, string> = {
-    'A': '#7e57c2',
-    'B': '#4e7fff',
-    'C': '#b39ddb',
-    'D': '#64b5f6'
+    '101': '#7e57c2',
+    '102': '#4e7fff',
+    '103': '#b39ddb',
+    '104': '#64b5f6',
+    '105': '#9575cd',
+    '106': '#5c6bc0',
+    '107': '#7986cb',
+    '108': '#4fc3f7'
   };
 
   React.useEffect(() => {
@@ -107,33 +96,22 @@ const Dashboard: React.FC = () => {
       try {
         setIsLoading(true);
         
-        // Hardcode the CSV data instead of reading from file
-        const csvData = `id,train_id,departure_date,from_city,to_city,class,scheduled_time,actual_time,delay_minutes,capacity,occupancy,revenue
-1,"A","2023-01-23","Colombo","Ella","First","11:38:00","11:43:00",5,20,19,47500
-2,"B","2023-02-18","Ella","Colombo","Economy","22:50:00","22:56:00",6,90,83,41500
-3,"C","2023-03-15","Kandy","Ella","Economy","06:19:00","06:22:00",3,110,60,30000
-4,"D","2023-04-04","Ella","Kandy","First","15:59:00","15:59:00",0,18,10,25000`;
+        // Get data from the data service
+        const transformedData = transformData();
+        setData(transformedData);
         
-        const parsedData = Papa.parse(csvData, {
-          header: true,
-          dynamicTyping: true,
-          skipEmptyLines: true
-        });
-        
-        // Clean and transform the data
-        const cleanedData = parsedData.data.map((entry: any) => ({
-          ...entry,
-          occupancyRate: (entry.occupancy / entry.capacity) * 100,
-          date: new Date(entry.departure_date),
-          year: new Date(entry.departure_date).getFullYear(),
-          month: new Date(entry.departure_date).getMonth() + 1,
-          quarter: Math.floor((new Date(entry.departure_date).getMonth() / 3)) + 1
-        })) as TrainEntry[];
-        
-        setData(cleanedData);
+        // Get upcoming departures
+        const departures = getUpcomingDepartures(5);
+        setUpcomingDepartures(departures);
         
         // Calculate summary statistics
-        calculateSummaryStats(cleanedData);
+        calculateSummaryStats(transformedData);
+        
+        // Get available years for the filter
+        const years = getAvailableYears();
+        if (years.length > 0) {
+          setAvailableYears(years);
+        }
         
         setIsLoading(false);
       } catch (error) {
@@ -145,7 +123,7 @@ const Dashboard: React.FC = () => {
     loadData();
   }, []);
   
-  const calculateSummaryStats = (data: TrainEntry[]) => {
+  const calculateSummaryStats = (data: TrainEntryType[]) => {
     const stats: SummaryStats = {
       totalRevenue: 0,
       averageOccupancyRate: 0,
@@ -156,7 +134,7 @@ const Dashboard: React.FC = () => {
     };
     
     // Initialize train stats
-    ['A', 'B', 'C', 'D'].forEach(train => {
+    ['101', '102', '103', '104', '105', '106', '107', '108'].forEach(train => {
       stats.trainStats[train] = {
         count: 0,
         totalRevenue: 0,
@@ -167,7 +145,7 @@ const Dashboard: React.FC = () => {
     });
     
     // Aggregate data
-    data.forEach((entry: TrainEntry) => {
+    data.forEach((entry: TrainEntryType) => {
       // Overall stats
       stats.totalRevenue += entry.revenue;
       stats.averageOccupancyRate += entry.occupancyRate;
@@ -265,7 +243,7 @@ const Dashboard: React.FC = () => {
   // Filter data based on selected year
   const filteredData = selectedYear === 'all' 
     ? data 
-    : data.filter((entry: TrainEntry) => entry.year === parseInt(selectedYear));
+    : data.filter((entry: TrainEntryType) => entry.year === parseInt(selectedYear));
   
   // Prepare data for charts
   const prepareTrainMetricData = (): TrainMetricDataItem[] => {
@@ -389,7 +367,9 @@ const Dashboard: React.FC = () => {
               onChange={(e) => setSelectedYear(e.target.value)}
             >
               <option value="all">All Years</option>
-              <option value="2023">2023</option>
+              {availableYears.map(year => (
+                <option key={year} value={year.toString()}>{year}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -414,9 +394,9 @@ const Dashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.slice(0, 2).map((train) => (
-                    <tr key={train.id}>
-                      <td className="py-2">{train.train_id}</td>
+                  {upcomingDepartures.slice(0, 5).map((train, index) => (
+                    <tr key={index}>
+                      <td className="py-2">{train.train_name}</td>
                       <td className="py-2">{train.from_city} → {train.to_city}</td>
                       <td className="py-2 text-right">{train.scheduled_time}</td>
                       <td className={`py-2 text-right ${train.delay_minutes > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
@@ -441,7 +421,7 @@ const Dashboard: React.FC = () => {
                 />
                 <Bar dataKey="value" name="Avg. Delay (minutes)">
                   {prepareTrainMetricData().map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={TRAIN_COLORS[entry.train]} />
+                    <Cell key={`cell-${index}`} fill={TRAIN_COLORS[entry.train] || '#7e57c2'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -487,7 +467,7 @@ const Dashboard: React.FC = () => {
                 />
                 <Bar dataKey="value" name="Revenue (LKR)">
                   {prepareTrainMetricData().map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={TRAIN_COLORS[entry.train]} />
+                    <Cell key={`cell-${index}`} fill={TRAIN_COLORS[entry.train] || '#7e57c2'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -578,7 +558,7 @@ const Dashboard: React.FC = () => {
                 />
                 <Bar dataKey="value" name="Occupancy Rate (%)">
                   {prepareTrainMetricData().map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={TRAIN_COLORS[entry.train]} />
+                    <Cell key={`cell-${index}`} fill={TRAIN_COLORS[entry.train] || '#7e57c2'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -606,7 +586,7 @@ const Dashboard: React.FC = () => {
                     key={train}
                     type="monotone" 
                     dataKey={train} 
-                    stroke={TRAIN_COLORS[train]} 
+                    stroke={TRAIN_COLORS[train] || COLORS[index % COLORS.length]} 
                     name={`Train ${train}`} 
                   />
                 ))}
