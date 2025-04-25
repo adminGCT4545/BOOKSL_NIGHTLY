@@ -97,18 +97,18 @@ const Dashboard: React.FC = () => {
         setIsLoading(true);
         
         // Get data from the data service
-        const transformedData = transformData();
+        const transformedData = await transformData();
         setData(transformedData);
         
         // Get upcoming departures
-        const departures = getUpcomingDepartures(5);
+        const departures = await getUpcomingDepartures(5);
         setUpcomingDepartures(departures);
         
         // Calculate summary statistics
         calculateSummaryStats(transformedData);
         
         // Get available years for the filter
-        const years = getAvailableYears();
+        const years = await getAvailableYears();
         if (years.length > 0) {
           setAvailableYears(years);
         }

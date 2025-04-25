@@ -70,7 +70,7 @@ const RemoteManagement: React.FC = () => {
         setIsLoading(true);
         
         // Get data from the data service
-        const transformedData = transformData();
+        const transformedData = await transformData();
         setData(transformedData);
         
         // Get available years for the filter

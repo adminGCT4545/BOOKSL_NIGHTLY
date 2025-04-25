@@ -1,4 +1,5 @@
-// This service transforms the SQL data into a format that can be used by the Dashboard component
+// This service transforms the PostgreSQL data into a format that can be used by the Dashboard component
+import { query } from './dbService';
 
 export interface TrainJourneyStats {
   journeyId: number;
@@ -34,81 +35,6 @@ export interface TrainEntry {
   quarter: number;
 }
 
-// Mock data based on the SQL dataset from complete_train_dataset(2).sql
-const trainJourneyStats: TrainJourneyStats[] = [
-  // January 2025 data
-  { journeyId: 1, trainId: 101, departureCity: 'Colombo', arrivalCity: 'Kandy', journeyDate: '2025-01-05', class: 'First', totalSeats: 50, reservedSeats: 45, isDelayed: true, revenue: 22500.00 },
-  { journeyId: 2, trainId: 101, departureCity: 'Kandy', arrivalCity: 'Colombo', journeyDate: '2025-01-05', class: 'First', totalSeats: 50, reservedSeats: 48, isDelayed: false, revenue: 24000.00 },
-  { journeyId: 3, trainId: 102, departureCity: 'Colombo', arrivalCity: 'Ella', journeyDate: '2025-01-05', class: 'Second', totalSeats: 80, reservedSeats: 65, isDelayed: false, revenue: 19500.00 },
-  { journeyId: 4, trainId: 102, departureCity: 'Ella', arrivalCity: 'Colombo', journeyDate: '2025-01-05', class: 'Second', totalSeats: 80, reservedSeats: 72, isDelayed: true, revenue: 21600.00 },
-  { journeyId: 5, trainId: 103, departureCity: 'Kandy', arrivalCity: 'Ella', journeyDate: '2025-01-06', class: 'Third', totalSeats: 120, reservedSeats: 95, isDelayed: false, revenue: 14250.00 },
-  { journeyId: 6, trainId: 103, departureCity: 'Ella', arrivalCity: 'Kandy', journeyDate: '2025-01-06', class: 'Third', totalSeats: 120, reservedSeats: 110, isDelayed: false, revenue: 16500.00 },
-  { journeyId: 7, trainId: 104, departureCity: 'Colombo', arrivalCity: 'Kandy', journeyDate: '2025-01-06', class: 'Second', totalSeats: 80, reservedSeats: 78, isDelayed: true, revenue: 23400.00 },
-  { journeyId: 8, trainId: 104, departureCity: 'Kandy', arrivalCity: 'Colombo', journeyDate: '2025-01-06', class: 'Second', totalSeats: 80, reservedSeats: 76, isDelayed: false, revenue: 22800.00 },
-  { journeyId: 9, trainId: 101, departureCity: 'Colombo', arrivalCity: 'Ella', journeyDate: '2025-01-07', class: 'First', totalSeats: 50, reservedSeats: 42, isDelayed: false, revenue: 25200.00 },
-  { journeyId: 10, trainId: 101, departureCity: 'Ella', arrivalCity: 'Colombo', journeyDate: '2025-01-07', class: 'First', totalSeats: 50, reservedSeats: 47, isDelayed: true, revenue: 28200.00 },
-  { journeyId: 11, trainId: 102, departureCity: 'Kandy', arrivalCity: 'Ella', journeyDate: '2025-01-07', class: 'Third', totalSeats: 120, reservedSeats: 85, isDelayed: false, revenue: 12750.00 },
-  { journeyId: 12, trainId: 102, departureCity: 'Ella', arrivalCity: 'Kandy', journeyDate: '2025-01-07', class: 'Third', totalSeats: 120, reservedSeats: 92, isDelayed: true, revenue: 13800.00 },
-  
-  // February 2025 data
-  { journeyId: 13, trainId: 103, departureCity: 'Colombo', arrivalCity: 'Kandy', journeyDate: '2025-02-10', class: 'First', totalSeats: 50, reservedSeats: 49, isDelayed: false, revenue: 24500.00 },
-  { journeyId: 14, trainId: 103, departureCity: 'Kandy', arrivalCity: 'Colombo', journeyDate: '2025-02-10', class: 'First', totalSeats: 50, reservedSeats: 50, isDelayed: false, revenue: 25000.00 },
-  { journeyId: 15, trainId: 104, departureCity: 'Colombo', arrivalCity: 'Ella', journeyDate: '2025-02-10', class: 'Second', totalSeats: 80, reservedSeats: 64, isDelayed: true, revenue: 19200.00 },
-  { journeyId: 16, trainId: 104, departureCity: 'Ella', arrivalCity: 'Colombo', journeyDate: '2025-02-10', class: 'Second', totalSeats: 80, reservedSeats: 70, isDelayed: false, revenue: 21000.00 },
-  { journeyId: 17, trainId: 101, departureCity: 'Kandy', arrivalCity: 'Ella', journeyDate: '2025-02-11', class: 'Third', totalSeats: 120, reservedSeats: 98, isDelayed: false, revenue: 14700.00 },
-  { journeyId: 18, trainId: 101, departureCity: 'Ella', arrivalCity: 'Kandy', journeyDate: '2025-02-11', class: 'Third', totalSeats: 120, reservedSeats: 105, isDelayed: false, revenue: 15750.00 },
-  
-  // 2024 data
-  { journeyId: 19, trainId: 105, departureCity: 'Ella', arrivalCity: 'Colombo', journeyDate: '2024-01-11', class: 'Third', totalSeats: 120, reservedSeats: 113, isDelayed: false, revenue: 18211.05 },
-  { journeyId: 20, trainId: 101, departureCity: 'Kandy', arrivalCity: 'Colombo', journeyDate: '2024-07-22', class: 'Third', totalSeats: 120, reservedSeats: 74, isDelayed: false, revenue: 10718.51 },
-  { journeyId: 21, trainId: 105, departureCity: 'Colombo', arrivalCity: 'Ella', journeyDate: '2024-06-15', class: 'Third', totalSeats: 120, reservedSeats: 81, isDelayed: false, revenue: 12478.04 },
-  { journeyId: 22, trainId: 102, departureCity: 'Kandy', arrivalCity: 'Colombo', journeyDate: '2024-06-15', class: 'Third', totalSeats: 120, reservedSeats: 72, isDelayed: false, revenue: 11056.98 },
-  { journeyId: 23, trainId: 103, departureCity: 'Ella', arrivalCity: 'Colombo', journeyDate: '2024-06-15', class: 'First', totalSeats: 50, reservedSeats: 37, isDelayed: true, revenue: 24074.57 },
-  { journeyId: 24, trainId: 103, departureCity: 'Ella', arrivalCity: 'Kandy', journeyDate: '2024-06-15', class: 'Second', totalSeats: 80, reservedSeats: 54, isDelayed: false, revenue: 14909.75 },
-  { journeyId: 25, trainId: 103, departureCity: 'Kandy', arrivalCity: 'Colombo', journeyDate: '2024-06-15', class: 'Third', totalSeats: 120, reservedSeats: 98, isDelayed: true, revenue: 13754.50 },
-  { journeyId: 26, trainId: 108, departureCity: 'Kandy', arrivalCity: 'Colombo', journeyDate: '2024-06-15', class: 'Second', totalSeats: 80, reservedSeats: 60, isDelayed: true, revenue: 17081.62 },
-  { journeyId: 27, trainId: 102, departureCity: 'Ella', arrivalCity: 'Colombo', journeyDate: '2024-06-15', class: 'Third', totalSeats: 120, reservedSeats: 106, isDelayed: false, revenue: 14861.04 },
-  { journeyId: 28, trainId: 103, departureCity: 'Ella', arrivalCity: 'Kandy', journeyDate: '2024-06-15', class: 'Second', totalSeats: 80, reservedSeats: 70, isDelayed: false, revenue: 19544.18 },
-  { journeyId: 29, trainId: 105, departureCity: 'Ella', arrivalCity: 'Kandy', journeyDate: '2024-06-15', class: 'First', totalSeats: 50, reservedSeats: 48, isDelayed: true, revenue: 30462.16 },
-  { journeyId: 30, trainId: 103, departureCity: 'Kandy', arrivalCity: 'Colombo', journeyDate: '2024-06-15', class: 'First', totalSeats: 50, reservedSeats: 47, isDelayed: false, revenue: 26636.58 },
-  
-  // Additional data
-  { journeyId: 31, trainId: 106, departureCity: 'Kandy', arrivalCity: 'Ella', journeyDate: '2024-03-22', class: 'Third', totalSeats: 120, reservedSeats: 102, isDelayed: true, revenue: 15956.40 },
-  { journeyId: 32, trainId: 104, departureCity: 'Ella', arrivalCity: 'Colombo', journeyDate: '2024-07-14', class: 'Second', totalSeats: 80, reservedSeats: 65, isDelayed: false, revenue: 20345.85 },
-  { journeyId: 33, trainId: 107, departureCity: 'Colombo', arrivalCity: 'Kandy', journeyDate: '2024-10-05', class: 'First', totalSeats: 50, reservedSeats: 43, isDelayed: true, revenue: 27144.90 },
-  { journeyId: 34, trainId: 108, departureCity: 'Kandy', arrivalCity: 'Ella', journeyDate: '2024-11-18', class: 'Third', totalSeats: 120, reservedSeats: 96, isDelayed: true, revenue: 15342.72 },
-  { journeyId: 35, trainId: 105, departureCity: 'Ella', arrivalCity: 'Colombo', journeyDate: '2024-05-29', class: 'Second', totalSeats: 80, reservedSeats: 75, isDelayed: false, revenue: 21956.25 },
-  { journeyId: 36, trainId: 107, departureCity: 'Colombo', arrivalCity: 'Ella', journeyDate: '2025-03-12', class: 'First', totalSeats: 50, reservedSeats: 47, isDelayed: false, revenue: 28752.06 },
-  { journeyId: 37, trainId: 104, departureCity: 'Ella', arrivalCity: 'Kandy', journeyDate: '2025-01-23', class: 'Third', totalSeats: 120, reservedSeats: 108, isDelayed: true, revenue: 17562.60 },
-  { journeyId: 38, trainId: 106, departureCity: 'Kandy', arrivalCity: 'Colombo', journeyDate: '2025-02-09', class: 'Second', totalSeats: 80, reservedSeats: 62, isDelayed: false, revenue: 18937.50 },
-  { journeyId: 39, trainId: 105, departureCity: 'Colombo', arrivalCity: 'Ella', journeyDate: '2024-12-24', class: 'First', totalSeats: 50, reservedSeats: 48, isDelayed: true, revenue: 29760.96 },
-  { journeyId: 40, trainId: 108, departureCity: 'Kandy', arrivalCity: 'Colombo', journeyDate: '2025-04-07', class: 'Third', totalSeats: 120, reservedSeats: 97, isDelayed: false, revenue: 15941.25 }
-];
-
-// Train names mapping
-const trainNames: Record<number, string> = {
-  101: 'Perali Express',
-  102: 'Udarata Menike',
-  103: 'Kandy Intercity',
-  104: 'Ella Odyssey',
-  105: 'Rajarata Express',
-  106: 'Yal Devi',
-  107: 'Podi Menike',
-  108: 'Ruhunu Kumari'
-};
-
-// Default scheduled and actual times for each train
-const trainSchedules: Record<number, { scheduled: string, delay: number }> = {
-  101: { scheduled: '06:00:00', delay: 5 },
-  102: { scheduled: '07:30:00', delay: 8 },
-  103: { scheduled: '14:00:00', delay: 0 },
-  104: { scheduled: '16:30:00', delay: 15 },
-  105: { scheduled: '08:15:00', delay: 10 },
-  106: { scheduled: '10:45:00', delay: 0 },
-  107: { scheduled: '12:30:00', delay: 7 },
-  108: { scheduled: '18:00:00', delay: 12 }
-};
-
 // Function to calculate actual time based on scheduled time and delay
 const calculateActualTime = (scheduledTime: string, delayMinutes: number): string => {
   const scheduled = new Date(`2000-01-01T${scheduledTime}`);
@@ -117,93 +43,271 @@ const calculateActualTime = (scheduledTime: string, delayMinutes: number): strin
 };
 
 // Function to transform the data into the format expected by the Dashboard component
-export const transformData = (): TrainEntry[] => {
-  const entries: TrainEntry[] = [];
-  let id = 1;
+export const transformData = async (): Promise<TrainEntry[]> => {
+  try {
+    // Query to join train_journeys with trains and train_schedules
+    const sql = `
+      SELECT 
+        j.journey_id, 
+        j.train_id, 
+        t.train_name, 
+        j.departure_city, 
+        j.arrival_city, 
+        j.journey_date, 
+        j.class, 
+        s.scheduled_time, 
+        j.is_delayed, 
+        CASE WHEN j.is_delayed THEN s.default_delay_minutes ELSE 0 END as delay_minutes,
+        j.total_seats, 
+        j.reserved_seats, 
+        j.revenue
+      FROM 
+        train_journeys j
+      JOIN 
+        trains t ON j.train_id = t.train_id
+      JOIN 
+        train_schedules s ON j.train_id = s.train_id
+      ORDER BY 
+        j.journey_date
+    `;
 
-  for (const journey of trainJourneyStats) {
-    const trainName = trainNames[journey.trainId] || `Train ${journey.trainId}`;
-    const schedule = trainSchedules[journey.trainId] || { scheduled: '12:00:00', delay: 0 };
-    const scheduledTime = schedule.scheduled;
-    const delayMinutes = journey.isDelayed ? schedule.delay : 0;
-    const actualTime = calculateActualTime(scheduledTime, delayMinutes);
-    
-    const date = new Date(journey.journeyDate);
-    
-    entries.push({
-      id: id++,
-      train_id: journey.trainId.toString(),
-      train_name: trainName,
-      departure_date: journey.journeyDate,
-      from_city: journey.departureCity,
-      to_city: journey.arrivalCity,
-      class: journey.class,
-      scheduled_time: scheduledTime,
-      actual_time: actualTime,
-      delay_minutes: delayMinutes,
-      capacity: journey.totalSeats,
-      occupancy: journey.reservedSeats,
-      revenue: journey.revenue,
-      occupancyRate: (journey.reservedSeats / journey.totalSeats) * 100,
-      date,
-      year: date.getFullYear(),
-      month: date.getMonth() + 1,
-      quarter: Math.floor(date.getMonth() / 3) + 1
-    });
+    try {
+      const result = await query(sql);
+      const entries: TrainEntry[] = [];
+      let id = 1;
+
+      for (const row of result.rows) {
+        const scheduledTime = row.scheduled_time.substring(0, 8); // Format: HH:MM:SS
+        const delayMinutes = row.delay_minutes;
+        const actualTime = calculateActualTime(scheduledTime, delayMinutes);
+        const date = new Date(row.journey_date);
+        
+        entries.push({
+          id: id++,
+          train_id: row.train_id.toString(),
+          train_name: row.train_name,
+          departure_date: row.journey_date,
+          from_city: row.departure_city,
+          to_city: row.arrival_city,
+          class: row.class,
+          scheduled_time: scheduledTime,
+          actual_time: actualTime,
+          delay_minutes: delayMinutes,
+          capacity: row.total_seats,
+          occupancy: row.reserved_seats,
+          revenue: parseFloat(row.revenue),
+          occupancyRate: (row.reserved_seats / row.total_seats) * 100,
+          date,
+          year: date.getFullYear(),
+          month: date.getMonth() + 1,
+          quarter: Math.floor(date.getMonth() / 3) + 1
+        });
+      }
+
+      return entries;
+    } catch (dbError) {
+      console.warn('Database query failed, using fallback data:', dbError);
+      return getFallbackData();
+    }
+  } catch (error) {
+    console.error('Error transforming data:', error);
+    return [];
   }
-
-  return entries;
 };
 
 // Function to get all available years in the data
-export const getAvailableYears = (): number[] => {
-  const years = new Set<number>();
-  trainJourneyStats.forEach(journey => {
-    const year = new Date(journey.journeyDate).getFullYear();
-    years.add(year);
-  });
-  return Array.from(years).sort();
+export const getAvailableYears = async (): Promise<number[]> => {
+  try {
+    const sql = `
+      SELECT DISTINCT EXTRACT(YEAR FROM journey_date) as year
+      FROM train_journeys
+      ORDER BY year
+    `;
+    
+    try {
+      const result = await query(sql);
+      return result.rows.map((row: { year: string }) => parseInt(row.year));
+    } catch (dbError) {
+      console.warn('Database query failed, using fallback years:', dbError);
+      // Extract years from fallback data
+      const fallbackData = getFallbackData();
+      const years = [...new Set(fallbackData.map(entry => entry.year))];
+      return years.sort();
+    }
+  } catch (error) {
+    console.error('Error getting available years:', error);
+    return [];
+  }
 };
 
 // Function to get upcoming departures
-export const getUpcomingDepartures = (count: number = 5): any[] => {
-  const result: any[] = [];
-  
-  // Sort journeys by date
-  const sortedJourneys = [...trainJourneyStats].sort((a, b) => {
-    return new Date(a.journeyDate).getTime() - new Date(b.journeyDate).getTime();
-  });
-  
-  // Get unique train-route combinations
-  const uniqueTrainRoutes = new Map<string, TrainJourneyStats>();
-  sortedJourneys.forEach(journey => {
-    const key = `${journey.trainId}-${journey.departureCity}-${journey.arrivalCity}`;
-    if (!uniqueTrainRoutes.has(key)) {
-      uniqueTrainRoutes.set(key, journey);
-    }
-  });
-  
-  // Convert to array and take first 'count' entries
-  const uniqueJourneys = Array.from(uniqueTrainRoutes.values()).slice(0, count);
-  
-  // Transform to the expected format
-  for (const journey of uniqueJourneys) {
-    const trainName = trainNames[journey.trainId] || `Train ${journey.trainId}`;
-    const schedule = trainSchedules[journey.trainId] || { scheduled: '12:00:00', delay: 0 };
-    const scheduledTime = schedule.scheduled;
-    const delayMinutes = journey.isDelayed ? schedule.delay : 0;
+export const getUpcomingDepartures = async (count: number = 5): Promise<any[]> => {
+  try {
+    const sql = `
+      SELECT DISTINCT ON (j.train_id, j.departure_city, j.arrival_city)
+        j.train_id,
+        t.train_name,
+        j.departure_city as from_city,
+        j.arrival_city as to_city,
+        s.scheduled_time,
+        j.is_delayed,
+        CASE WHEN j.is_delayed THEN s.default_delay_minutes ELSE 0 END as delay_minutes,
+        j.journey_date as departure_date
+      FROM 
+        train_journeys j
+      JOIN 
+        trains t ON j.train_id = t.train_id
+      JOIN 
+        train_schedules s ON j.train_id = s.train_id
+      ORDER BY 
+        j.train_id, j.departure_city, j.arrival_city, j.journey_date
+      LIMIT $1
+    `;
     
-    result.push({
-      train_id: journey.trainId,
-      train_name: trainName,
-      from_city: journey.departureCity,
-      to_city: journey.arrivalCity,
-      scheduled_time: scheduledTime,
-      actual_time: calculateActualTime(scheduledTime, delayMinutes),
-      delay_minutes: delayMinutes,
-      departure_date: journey.journeyDate
-    });
+    try {
+      const result = await query(sql, [count]);
+      
+      return result.rows.map((row: any) => {
+        const scheduledTime = row.scheduled_time.substring(0, 8);
+        const delayMinutes = row.delay_minutes;
+        
+        return {
+          train_id: row.train_id,
+          train_name: row.train_name,
+          from_city: row.from_city,
+          to_city: row.to_city,
+          scheduled_time: scheduledTime,
+          actual_time: calculateActualTime(scheduledTime, delayMinutes),
+          delay_minutes: delayMinutes,
+          departure_date: row.departure_date
+        };
+      });
+    } catch (dbError) {
+      console.warn('Database query failed, using fallback departures:', dbError);
+      // Use the first few entries from fallback data as upcoming departures
+      const fallbackData = getFallbackData();
+      return fallbackData.slice(0, count).map(entry => ({
+        train_id: entry.train_id,
+        train_name: entry.train_name,
+        from_city: entry.from_city,
+        to_city: entry.to_city,
+        scheduled_time: entry.scheduled_time,
+        actual_time: entry.actual_time,
+        delay_minutes: entry.delay_minutes,
+        departure_date: entry.departure_date
+      }));
+    }
+  } catch (error) {
+    console.error('Error getting upcoming departures:', error);
+    return [];
   }
+};
+
+// Fallback data in case database connection fails
+const getFallbackData = () => {
+  console.warn('Using fallback data due to database connection issues');
   
-  return result;
+  // Return a small subset of mock data
+  return [
+    { 
+      id: 1, 
+      train_id: '101', 
+      train_name: 'Perali Express', 
+      departure_date: '2025-01-05', 
+      from_city: 'Colombo', 
+      to_city: 'Kandy', 
+      class: 'First', 
+      scheduled_time: '06:00:00', 
+      actual_time: '06:05:00', 
+      delay_minutes: 5, 
+      capacity: 50, 
+      occupancy: 45, 
+      revenue: 22500.00, 
+      occupancyRate: 90, 
+      date: new Date('2025-01-05'), 
+      year: 2025, 
+      month: 1, 
+      quarter: 1 
+    },
+    { 
+      id: 2, 
+      train_id: '102', 
+      train_name: 'Udarata Menike', 
+      departure_date: '2025-01-05', 
+      from_city: 'Colombo', 
+      to_city: 'Ella', 
+      class: 'Second', 
+      scheduled_time: '07:30:00', 
+      actual_time: '07:38:00', 
+      delay_minutes: 8, 
+      capacity: 80, 
+      occupancy: 65, 
+      revenue: 19500.00, 
+      occupancyRate: 81.25, 
+      date: new Date('2025-01-05'), 
+      year: 2025, 
+      month: 1, 
+      quarter: 1 
+    },
+    { 
+      id: 3, 
+      train_id: '103', 
+      train_name: 'Kandy Intercity', 
+      departure_date: '2025-01-06', 
+      from_city: 'Kandy', 
+      to_city: 'Ella', 
+      class: 'Third', 
+      scheduled_time: '14:00:00', 
+      actual_time: '14:00:00', 
+      delay_minutes: 0, 
+      capacity: 120, 
+      occupancy: 95, 
+      revenue: 14250.00, 
+      occupancyRate: 79.17, 
+      date: new Date('2025-01-06'), 
+      year: 2025, 
+      month: 1, 
+      quarter: 1 
+    },
+    { 
+      id: 4, 
+      train_id: '104', 
+      train_name: 'Ella Odyssey', 
+      departure_date: '2025-01-06', 
+      from_city: 'Colombo', 
+      to_city: 'Kandy', 
+      class: 'Second', 
+      scheduled_time: '16:30:00', 
+      actual_time: '16:45:00', 
+      delay_minutes: 15, 
+      capacity: 80, 
+      occupancy: 78, 
+      revenue: 23400.00, 
+      occupancyRate: 97.5, 
+      date: new Date('2025-01-06'), 
+      year: 2025, 
+      month: 1, 
+      quarter: 1 
+    },
+    { 
+      id: 5, 
+      train_id: '105', 
+      train_name: 'Rajarata Express', 
+      departure_date: '2024-06-15', 
+      from_city: 'Colombo', 
+      to_city: 'Ella', 
+      class: 'Third', 
+      scheduled_time: '08:15:00', 
+      actual_time: '08:25:00', 
+      delay_minutes: 10, 
+      capacity: 120, 
+      occupancy: 81, 
+      revenue: 12478.04, 
+      occupancyRate: 67.5, 
+      date: new Date('2024-06-15'), 
+      year: 2024, 
+      month: 6, 
+      quarter: 2 
+    }
+  ];
 };

@@ -52,7 +52,7 @@ const TrainFleet: React.FC = () => {
         setIsLoading(true);
         
         // Get data from the data service
-        const data = transformData();
+        const data = await transformData();
         setTrainData(data);
         
         // Process data to get fleet information

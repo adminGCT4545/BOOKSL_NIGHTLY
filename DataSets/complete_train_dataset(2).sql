@@ -1,60 +1,60 @@
-(103, 'Kandy', 'Colombo', '2024-07-28', 'Third', 120, 106, true, 17098.74),
-(105, 'Kandy', 'Colombo', '2024-05-10', 'Third', 120, 87, true, 12804.29),
-(106, 'Kandy', 'Colombo', '2024-07-02', 'Second', 80, 60, false, 16429.20),
-(106, 'Ella', 'Kandy', '2025-02-09', 'First', 50, 48, true, 27461.20),
-(107, 'Ella', 'Colombo', '2024-09-17', 'First', 50, 34, false, 18412.07),
-(107, 'Colombo', 'Kandy', '2024-07-05', 'Second', 80, 55, true, 16481.99),
-(102, 'Kandy', 'Ella', '2025-05-18', 'Third', 120, 93, false, 14053.95),
-(101, 'Ella', 'Colombo', '2024-04-03', 'First', 50, 38, false, 20984.19),
-(108, 'Colombo', 'Ella', '2025-01-15', 'Second', 80, 71, true, 20553.20),
-(103, 'Kandy', 'Colombo', '2024-12-23', 'Third', 120, 106, false, 16193.92),
-(104, 'Ella', 'Kandy', '2024-03-17', 'First', 50, 35, true, 19686.27),
-(101, 'Colombo', 'Ella', '2025-02-26', 'Second', 80, 62, false, 18633.03),
-(107, 'Kandy', 'Colombo', '2024-10-27', 'Third', 120, 80, true, 12060.87),
-(105, 'Ella', 'Kandy', '2025-05-02', 'First', 50, 47, false, 26622.15),
-(102, 'Colombo', 'Kandy', '2024-08-09', 'Second', 80, 63, true, 18633.03),
-(105, 'Colombo', 'Ella', '2024-04-29', 'Second', 80, 50, false, 16167.33),
-(107, 'Ella', 'Colombo', '2024-10-04', 'First', 50, 33, false, 21421.05),
-(108, 'Colombo', 'Kandy', '2024-03-17', 'Second', 80, 62, true, 18908.97),
-(105, 'Kandy', 'Ella', '2024-02-16', 'Third', 120, 111, false, 15913.01),
-(105, 'Ella', 'Colombo', '2024-12-29', 'Second', 80, 64, false, 18732.60),
-(101, 'Kandy', 'Colombo', '2025-04-04', 'First', 50, 45, true, 26042.11),
-(104, 'Ella', 'Kandy', '2025-03-28', 'Third', 120, 102, false, 15914.85),
-(107, 'Colombo', 'Ella', '2024-05-05', 'Second', 80, 57, true, 16252.34),
-(102, 'Kandy', 'Colombo', '2024-06-28', 'First', 50, 36, false, 20736.72),
-(103, 'Ella', 'Kandy', '2025-05-01', 'Third', 120, 95, true, 13578.84),
-(106, 'Colombo', 'Ella', '2025-01-22', 'Second', 80, 60, false, 17673.00),
-(104, 'Kandy', 'Colombo', '2024-09-02', 'First', 50, 41, true, 23535.42),
-(108, 'Ella', 'Kandy', '2024-08-15', 'Third', 120, 80, false, 12591.24),
-(101, 'Colombo', 'Kandy', '2025-02-07', 'Second', 80, 54, true, 15780.18),
-(105, 'Kandy', 'Ella', '2024-11-09', 'First', 50, 39, false, 22596.30),
-(103, 'Colombo', 'Ella', '2024-07-20', 'Third', 120, 78, true, 11248.86),
-(106, 'Kandy', 'Colombo', '2025-04-25', 'Second', 80, 55, false, 15842.40),
-(102, 'Ella', 'Kandy', '2025-01-18', 'First', 50, 40, true, 23731.20),
-(108, 'Kandy', 'Colombo', '2024-09-23', 'Third', 120, 85, true, 11616.89);
+-- Formatted train data with train_id, booking_date, booked_1st_class, booked_2nd_class, booked_3rd_class
 
--- 3. KPI Queries for ERP Dashboard
-
--- Overall Occupancy Percentage
+WITH train_data AS (
+    SELECT 
+        TrainID, 
+        JourneyDate AS booking_date, 
+        Class, 
+        ReservedSeats
+    FROM 
+        TrainJourneyStats
+),
+first_class AS (
+    SELECT 
+        TrainID, 
+        booking_date, 
+        ReservedSeats AS booked_1st_class
+    FROM 
+        train_data
+    WHERE 
+        Class = 'First'
+),
+second_class AS (
+    SELECT 
+        TrainID, 
+        booking_date, 
+        ReservedSeats AS booked_2nd_class
+    FROM 
+        train_data
+    WHERE 
+        Class = 'Second'
+),
+third_class AS (
+    SELECT 
+        TrainID, 
+        booking_date, 
+        ReservedSeats AS booked_3rd_class
+    FROM 
+        train_data
+    WHERE 
+        Class = 'Third'
+)
 SELECT 
-    ROUND((SUM(ReservedSeats) * 100.0 / SUM(TotalSeats)), 2) AS overall_occupancy_percentage
+    td.TrainID AS train_id,
+    td.booking_date,
+    COALESCE(fc.booked_1st_class, 0) AS booked_1st_class,
+    COALESCE(sc.booked_2nd_class, 0) AS booked_2nd_class,
+    COALESCE(tc.booked_3rd_class, 0) AS booked_3rd_class
 FROM 
-    TrainJourneyStats;
-
--- Overall Percentage of Delays
-SELECT 
-    ROUND((SUM(CASE WHEN IsDelayed THEN 1 ELSE 0 END) * 100.0 / COUNT(*)), 2) AS overall_delay_percentage
-FROM 
-    TrainJourneyStats;
-
--- Total Revenue
-SELECT 
-    SUM(Revenue) AS total_revenue
-FROM 
-    TrainJourneyStats;
-
--- KPIs Grouped by TrainID
-SELECT 
+    (SELECT DISTINCT TrainID, booking_date FROM train_data) td
+LEFT JOIN 
+    first_class fc ON td.TrainID = fc.TrainID AND td.booking_date = fc.booking_date
+LEFT JOIN 
+    second_class sc ON td.TrainID = sc.TrainID AND td.booking_date = sc.booking_date
+LEFT JOIN 
+    third_class tc ON td.TrainID = tc.TrainID AND td.booking_date = tc.booking_date
+ORDER BY 
+    td.booking_date, td.TrainID;
     TrainID,
     ROUND((SUM(ReservedSeats) * 100.0 / SUM(TotalSeats)), 2) AS train_occupancy_percentage,
     ROUND((SUM(CASE WHEN IsDelayed THEN 1 ELSE 0 END) * 100.0 / COUNT(*)), 2) AS train_delay_percentage,

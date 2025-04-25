@@ -19,6 +19,7 @@ Before you begin, ensure you have the following installed:
 
 - [Node.js](https://nodejs.org/) (v18.0.0 or higher)
 - npm (v9.0.0 or higher) or [yarn](https://yarnpkg.com/) (v1.22.0 or higher)
+- [PostgreSQL](https://www.postgresql.org/) (v14.0 or higher)
 
 ## Installation
 
@@ -36,6 +37,26 @@ npm install
 # or
 yarn
 ```
+
+3. Configure the database:
+
+   a. Create a `.env` file in the root directory with your PostgreSQL credentials:
+
+   ```
+   PGHOST=localhost
+   PGUSER=your_postgres_username
+   PGPASSWORD=your_postgres_password
+   PGDATABASE=booksl_train
+   PGPORT=5432
+   ```
+
+   b. Run the database setup script:
+
+   ```bash
+   ./setup-database.sh
+   ```
+
+   This script will create the database and tables, and populate them with sample data.
 
 ## Running the Application
 
@@ -76,10 +97,16 @@ BookSL-Train-Dashboard/
 │   ├── assets/           # Images and other assets
 │   ├── components/       # React components
 │   │   └── Dashboard.tsx # Main dashboard component
+│   ├── services/         # Service modules
+│   │   ├── dataService.ts # Data transformation service
+│   │   └── dbService.ts   # Database connection service
 │   ├── App.tsx           # Main application component
 │   ├── main.tsx          # Application entry point
 │   └── index.css         # Global styles
 ├── index.html            # HTML template
+├── .env                  # Environment variables for database connection
+├── setup-database.sql    # SQL script to create and populate database tables
+├── setup-database.sh     # Shell script to set up the database
 ├── package.json          # Project dependencies and scripts
 ├── tsconfig.json         # TypeScript configuration
 ├── vite.config.ts        # Vite configuration
@@ -93,7 +120,8 @@ BookSL-Train-Dashboard/
 - [Vite](https://vitejs.dev/) - Build tool and development server
 - [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
 - [Recharts](https://recharts.org/) - Charting library for data visualization
-- [Papa Parse](https://www.papaparse.com/) - CSV parsing library
+- [PostgreSQL](https://www.postgresql.org/) - Relational database
+- [node-postgres](https://node-postgres.com/) - PostgreSQL client for Node.js
 
 ## Features
 
@@ -102,6 +130,8 @@ BookSL-Train-Dashboard/
 - **Revenue Analysis**: Visualize ticket sales and revenue by train and class
 - **Occupancy Tracking**: Monitor train occupancy rates
 - **Performance Metrics**: Track key performance indicators
+- **PostgreSQL Integration**: Data stored and retrieved from a PostgreSQL database
+- **Fallback Mechanism**: Graceful handling of database connection issues with fallback data
 
 ## Development
 
@@ -111,6 +141,20 @@ BookSL-Train-Dashboard/
 - `npm run build` - Build for production
 - `npm run lint` - Run ESLint to check code quality
 - `npm run preview` - Preview the production build locally
+- `./setup-database.sh` - Set up the PostgreSQL database
+
+### Database Management
+
+The application uses PostgreSQL to store train journey data. The database connection is managed by the `dbService.ts` module, which uses the node-postgres library to connect to the database.
+
+Key database files:
+- `.env` - Contains database connection parameters
+- `setup-database.sql` - SQL script to create tables and insert sample data
+- `setup-database.sh` - Shell script to automate database setup
+- `src/services/dbService.ts` - Database connection service
+- `src/services/dataService.ts` - Service to transform database data for the dashboard
+
+If you need to modify the database schema or sample data, edit the `setup-database.sql` file and run the setup script again.
 
 ### Customization
 
