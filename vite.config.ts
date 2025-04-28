@@ -8,5 +8,13 @@ export default defineConfig({
     hmr: {
       overlay: false, // Disable the error overlay
     },
+    port: 5174,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      }
+    },
   },
 })
