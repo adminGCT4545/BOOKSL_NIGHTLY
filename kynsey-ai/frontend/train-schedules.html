@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Train Schedules - BookSL Train Management</title>
+  <script src="layout.js" type="module"></script>
+</head>
+<body>
+  <div id="app"></div>
+  
+  <script type="module">
+    import renderLayout from './layout.js';
+    
+    // Fetch train schedules data
+    async function fetchTrainSchedulesData() {
+      try {
+        const response = await fetch('/api/train-schedules');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error('Error fetching train schedules data:', error);
+        return null;
+      }
+    }
+    
+    // Format time
+    function formatTime(timeString) {
+      return timeString.substring(0, 5); // HH:MM
+    }
+    
+    // Format date
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+    
+    // Render train schedules
+    async function renderTrainSchedules() {
+      const trainSchedulesData = await fetchTrainSchedulesData();
+      
+      if (!trainSchedulesData) {
+        document.getElementById('app').innerHTML = renderLayout(
+          'Train Schedules - BookSL Train Management',
+          'schedules',
+          '<div class="p-4"><div class="bg-red-500 text-white p-4 rounded">Error loading train schedules data</div></div>'
+        );
+        return;
+      }
+      
+      const { data } = trainSchedulesData;
+      
+      // Group data by train
+      const trainGroups = {};
+      data.forEach(entry => {
+        if (!trainGroups[entry.train_id]) {
+          trainGroups[entry.train_id] = {
+            train_id: entry.train_id,
+            train_name: entry.train_name,
+            schedules: []
+          };
+        }
+        
+        trainGroups[entry.train_id].schedules.push(entry);
+      });
+      
+      // Sort schedules by date and time
+      Object.values(trainGroups).forEach(train => {
+        train.schedules.sort((a, b) => {
+          const dateA = new Date(a.departure_date + 'T' + a.scheduled_time);
+          const dateB = new Date(b.departure_date + 'T' + b.scheduled_time);
+          return dateA - dateB;
+        });
+      });
+      
+      // Build content
+      const content = `
+        <div class="p-4">
+          <div class="mb-4 px-2 flex justify-between items-center">
+            <h1 class="text-xl font-medium text-dashboard-header">Train Schedules</h1>
+            <div class="flex items-center space-x-4">
+              <button id="printSchedules" class="bg-dashboard-blue text-white px-4 py-2 rounded hover:bg-blue-600 transition">
+                Print Schedules
+              </button>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 gap-6">
+            ${Object.values(trainGroups).map(train => `
+              <div class="bg-dashboard-panel rounded shadow p-4">
+                <h2 class="text-dashboard-header text-lg mb-4">
+                  Train ${train.train_id}: ${train.train_name}
+                </h2>
+                
+                <div class="bg-dashboard-dark rounded p-2">
+                  <table class="w-full text-dashboard-text text-sm">
+                    <thead>
+                      <tr class="border-b border-gray-700">
+                        <th class="text-left py-2">Date</th>
+                        <th class="text-left py-2">Route</th>
+                        <th class="text-left py-2">Class</th>
+                        <th class="text-center py-2">Scheduled Time</th>
+                        <th class="text-center py-2">Actual Time</th>
+                        <th class="text-center py-2">Status</th>
+                        <th class="text-right py-2">Occupancy</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${train.schedules.map(schedule => `
+                        <tr class="border-b border-gray-700">
+                          <td class="py-2">${formatDate(schedule.departure_date)}</td>
+                          <td class="py-2">${schedule.from_city} → ${schedule.to_city}</td>
+                          <td class="py-2">${schedule.class}</td>
+                          <td class="py-2 text-center">${formatTime(schedule.scheduled_time)}</td>
+                          <td class="py-2 text-center">${formatTime(schedule.actual_time)}</td>
+                          <td class="py-2 text-center ${schedule.delay_minutes > 0 ? 'text-yellow-400' : 'text-green-400'}">
+                            ${schedule.delay_minutes > 0 ? `Delayed ${schedule.delay_minutes}m` : 'On Time'}
+                          </td>
+                          <td class="py-2 text-right">
+                            ${schedule.occupancy}/${schedule.capacity} 
+                            (${Math.round(schedule.occupancyRate)}%)
+                          </td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('app').innerHTML = renderLayout('Train Schedules - BookSL Train Management', 'schedules', content);
+      
+      // Add event listener for print button
+      document.getElementById('printSchedules').addEventListener('click', () => {
+        window.print();
+      });
+    }
+    
+    // Render the train schedules
+    renderTrainSchedules();
+  </script>
+</body>
+</html>

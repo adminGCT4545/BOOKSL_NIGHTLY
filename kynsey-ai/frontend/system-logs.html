@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Logs - BookSL Train Management</title>
+  <script src="layout.js" type="module"></script>
+</head>
+<body>
+  <div id="app"></div>
+  
+  <script type="module">
+    import renderLayout from './layout.js';
+    
+    // Fetch system logs data
+    async function fetchSystemLogsData() {
+      try {
+        const response = await fetch('/api/system-logs');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error('Error fetching system logs data:', error);
+        return null;
+      }
+    }
+    
+    // Format date
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    }
+    
+    // Generate test logs
+    async function generateTestLogs() {
+      try {
+        const response = await fetch('/api/system-logs/generate', {
+          method: 'POST'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Reload the page to show new logs
+        window.location.reload();
+      } catch (error) {
+        console.error('Error generating test logs:', error);
+        alert('Failed to generate test logs: ' + error.message);
+      }
+    }
+    
+    // Render system logs
+    async function renderSystemLogs() {
+      const systemLogsData = await fetchSystemLogsData();
+      
+      if (!systemLogsData) {
+        document.getElementById('app').innerHTML = renderLayout(
+          'System Logs - BookSL Train Management',
+          'systemLogs',
+          '<div class="p-4"><div class="bg-red-500 text-white p-4 rounded">Error loading system logs data</div></div>'
+        );
+        return;
+      }
+      
+      const { logs = [] } = systemLogsData;
+      
+      // Build content
+      const content = `
+        <div class="p-4">
+          <div class="mb-4 px-2 flex justify-between items-center">
+            <h1 class="text-xl font-medium text-dashboard-header">System Logs</h1>
+            <div class="flex items-center space-x-4">
+              <a href="/system-logs" class="ml-2 text-dashboard-subtext hover:text-dashboard-text px-4 py-2">Reset</a>
+              <button id="generateTestLogs" class="bg-dashboard-blue text-white px-4 py-2 rounded hover:bg-blue-600 transition">
+                Generate Test Logs
+              </button>
+            </div>
+          </div>
+          
+          <div class="bg-dashboard-panel rounded shadow p-4">
+            <div class="mb-4 flex justify-between items-center">
+              <h2 class="text-dashboard-header text-lg">Database Activity Logs</h2>
+              <div class="text-dashboard-subtext text-sm">
+                Showing ${logs.length} logs
+              </div>
+            </div>
+            
+            ${logs.length > 0 ? `
+              <div class="bg-dashboard-dark rounded p-2 overflow-x-auto">
+                <table class="w-full text-dashboard-text text-sm">
+                  <thead>
+                    <tr class="border-b border-gray-700">
+                      <th class="text-left py-2 px-3">ID</th>
+                      <th class="text-left py-2 px-3">Type</th>
+                      <th class="text-left py-2 px-3">Operation</th>
+                      <th class="text-left py-2 px-3">Details</th>
+                      <th class="text-left py-2 px-3">Status</th>
+                      <th class="text-left py-2 px-3">User</th>
+                      <th class="text-left py-2 px-3">Timestamp</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${logs.map(log => `
+                      <tr class="border-b border-gray-700">
+                        <td class="py-2 px-3">${log.log_id}</td>
+                        <td class="py-2 px-3">${log.log_type}</td>
+                        <td class="py-2 px-3">${log.operation}</td>
+                        <td class="py-2 px-3">
+                          <div class="max-w-md truncate" title="${log.query_details || ''}">
+                            ${log.query_details || ''}
+                          </div>
+                        </td>
+                        <td class="py-2 px-3 ${log.result_status === 'SUCCESS' ? 'text-green-400' : 'text-red-400'}">
+                          ${log.result_status || ''}
+                        </td>
+                        <td class="py-2 px-3">${log.user_id || ''}</td>
+                        <td class="py-2 px-3">${formatDate(log.created_at)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            ` : `
+              <div class="bg-dashboard-dark rounded p-4 text-center text-dashboard-subtext">
+                No logs found. Use the "Generate Test Logs" button to create sample logs.
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('app').innerHTML = renderLayout('System Logs - BookSL Train Management', 'systemLogs', content);
+      
+      // Add event listener for generate test logs button
+      document.getElementById('generateTestLogs').addEventListener('click', generateTestLogs);
+    }
+    
+    // Render the system logs
+    renderSystemLogs();
+  </script>
+</body>
+</html>

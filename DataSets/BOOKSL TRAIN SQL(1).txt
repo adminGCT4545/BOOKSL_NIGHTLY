@@ -1,0 +1,261 @@
+-- Create Database (Optional - execute if the database 'tms' doesn't exist)
+-- CREATE DATABASE tms;
+-- USE tms;
+
+-- Drop tables if they exist to allow rerunning the script easily
+DROP TABLE IF EXISTS train_departures;
+DROP TABLE IF EXISTS train_bookings;
+DROP TABLE IF EXISTS fares;
+DROP TABLE IF EXISTS trains;
+
+-- Create Tables
+
+-- trains table: Defines the trains, their routes, and capacities
+CREATE TABLE trains (
+    train_id INT PRIMARY KEY,
+    train_name VARCHAR(255) NOT NULL,
+    destination_city VARCHAR(255) NOT NULL,
+    capacity_1st_class INT NOT NULL,
+    capacity_2nd_class INT NOT NULL,
+    capacity_3rd_class INT NOT NULL
+);
+
+-- fares table: Stores the price per class
+CREATE TABLE fares (
+    class_name VARCHAR(50) PRIMARY KEY,
+    price DECIMAL(10, 2) NOT NULL
+);
+
+-- train_bookings table: Records seat bookings for each train on a specific departure date
+CREATE TABLE train_bookings (
+    booking_id INT AUTO_INCREMENT PRIMARY KEY,
+    train_id INT,
+    booking_date DATE NOT NULL, -- Date the booking was made (can be different from departure_date)
+    departure_date DATE NOT NULL, -- Date of travel
+    booked_1st_class INT DEFAULT 0,
+    booked_2nd_class INT DEFAULT 0,
+    booked_3rd_class INT DEFAULT 0,
+    FOREIGN KEY (train_id) REFERENCES trains(train_id)
+);
+
+-- train_departures table: Records scheduled and actual departure times
+CREATE TABLE train_departures (
+    departure_id INT AUTO_INCREMENT PRIMARY KEY,
+    train_id INT,
+    departure_date DATE NOT NULL, -- Date of departure
+    scheduled_departure_time TIME NOT NULL,
+    actual_departure_time TIME NOT NULL,
+    FOREIGN KEY (train_id) REFERENCES trains(train_id)
+);
+
+-- Insert Base Data
+
+-- Insert Train Data
+INSERT INTO trains (train_id, train_name, destination_city, capacity_1st_class, capacity_2nd_class, capacity_3rd_class) VALUES
+(1, 'Perali Express', 'Kandy', 50, 100, 200),   -- Colombo to Kandy
+(2, 'Udarata Menike', 'Ella', 40, 80, 180),    -- Colombo to Ella
+(3, 'Kandy Intercity', 'Colombo', 50, 100, 200),-- Kandy to Colombo
+(4, 'Ella Odyssey', 'Colombo', 40, 80, 180);   -- Ella to Colombo
+
+-- Insert Fare Data (Example prices in LKR)
+INSERT INTO fares (class_name, price) VALUES
+('First', 2000.00),
+('Second', 1000.00),
+('Third', 500.00);
+
+-- Insert Booking and Departure Data (60 entries each for 15 days x 4 trains)
+
+-- Data for 2024-10-01
+INSERT INTO train_bookings (train_id, booking_date, departure_date, booked_1st_class, booked_2nd_class, booked_3rd_class) VALUES
+(1, '2024-09-25', '2024-10-01', 45, 90, 180),
+(2, '2024-09-26', '2024-10-01', 38, 75, 160),
+(3, '2024-09-27', '2024-10-01', 40, 85, 170),
+(4, '2024-09-28', '2024-10-01', 35, 70, 150);
+
+INSERT INTO train_departures (train_id, departure_date, scheduled_departure_time, actual_departure_time) VALUES
+(1, '2024-10-01', '06:00:00', '06:00:00'), -- On Time
+(2, '2024-10-01', '07:30:00', '07:38:00'), -- 8 mins delay
+(3, '2024-10-01', '14:00:00', '14:00:00'), -- On Time
+(4, '2024-10-01', '16:30:00', '16:45:00'); -- 15 mins delay
+
+-- Data for 2024-10-02
+INSERT INTO train_bookings (train_id, booking_date, departure_date, booked_1st_class, booked_2nd_class, booked_3rd_class) VALUES
+(1, '2024-09-26', '2024-10-02', 40, 80, 170),
+(2, '2024-09-27', '2024-10-02', 30, 70, 150),
+(3, '2024-09-28', '2024-10-02', 45, 90, 180),
+(4, '2024-09-29', '2024-10-02', 38, 75, 165);
+
+INSERT INTO train_departures (train_id, departure_date, scheduled_departure_time, actual_departure_time) VALUES
+(1, '2024-10-02', '06:00:00', '06:05:00'), -- 5 mins delay
+(2, '2024-10-02', '07:30:00', '07:30:00'), -- On Time
+(3, '2024-10-02', '14:00:00', '14:10:00'), -- 10 mins delay
+(4, '2024-10-02', '16:30:00', '16:30:00'); -- On Time
+
+-- Data for 2024-10-03
+INSERT INTO train_bookings (train_id, booking_date, departure_date, booked_1st_class, booked_2nd_class, booked_3rd_class) VALUES
+(1, '2024-09-27', '2024-10-03', 50, 100, 200), -- Full
+(2, '2024-09-28', '2024-10-03', 40, 80, 180),  -- Full
+(3, '2024-09-29', '2024-10-03', 35, 70, 150),
+(4, '2024-09-30', '2024-10-03', 30, 65, 140);
+
+INSERT INTO train_departures (train_id, departure_date, scheduled_departure_time, actual_departure_time) VALUES
+(1, '2024-10-03', '06:00:00', '06:15:00'), -- 15 mins delay
+(2, '2024-10-03', '07:30:00', '07:40:00'), -- 10 mins delay
+(3, '2024-10-03', '14:00:00', '14:00:00'), -- On Time
+(4, '2024-10-03', '16:30:00', '16:30:00'); -- On Time
+
+-- Data for 2024-10-04
+INSERT INTO train_bookings (train_id, booking_date, departure_date, booked_1st_class, booked_2nd_class, booked_3rd_class) VALUES
+(1, '2024-09-28', '2024-10-04', 30, 60, 120),
+(2, '2024-09-29', '2024-10-04', 25, 50, 110),
+(3, '2024-09-30', '2024-10-04', 40, 80, 160),
+(4, '2024-10-01', '2024-10-04', 35, 70, 150);
+
+INSERT INTO train_departures (train_id, departure_date, scheduled_departure_time, actual_departure_time) VALUES
+(1, '2024-10-04', '06:00:00', '06:00:00'), -- On Time
+(2, '2024-10-04', '07:30:00', '07:30:00'), -- On Time
+(3, '2024-10-04', '14:00:00', '14:08:00'), -- 8 mins delay
+(4, '2024-10-04', '16:30:00', '16:30:00'); -- On Time
+
+-- Data for 2024-10-05
+INSERT INTO train_bookings (train_id, booking_date, departure_date, booked_1st_class, booked_2nd_class, booked_3rd_class) VALUES
+(1, '2024-09-29', '2024-10-05', 48, 95, 190),
+(2, '2024-09-30', '2024-10-05', 39, 78, 175),
+(3, '2024-10-01', '2024-10-05', 42, 88, 178),
+(4, '2024-10-02', '2024-10-05', 37, 74, 168);
+
+INSERT INTO train_departures (train_id, departure_date, scheduled_departure_time, actual_departure_time) VALUES
+(1, '2024-10-05', '06:00:00', '06:10:00'), -- 10 mins delay
+(2, '2024-10-05', '07:30:00', '07:30:00'), -- On Time
+(3, '2024-10-05', '14:00:00', '14:00:00'), -- On Time
+(4, '2024-10-05', '16:30:00', '16:50:00'); -- 20 mins delay
+
+-- Data for 2024-10-06
+INSERT INTO train_bookings (train_id, booking_date, departure_date, booked_1st_class, booked_2nd_class, booked_3rd_class) VALUES
+(1, '2024-09-30', '2024-10-06', 40, 80, 160),
+(2, '2024-10-01', '2024-10-06', 30, 60, 130),
+(3, '2024-10-02', '2024-10-06', 45, 90, 180),
+(4, '2024-10-03', '2024-10-06', 38, 75, 165);
+
+INSERT INTO train_departures (train_id, departure_date, scheduled_departure_time, actual_departure_time) VALUES
+(1, '2024-10-06', '06:00:00', '06:00:00'), -- On Time
+(2, '2024-10-06', '07:30:00', '07:35:00'), -- 5 mins delay
+(3, '2024-10-06', '14:00:00', '14:00:00'), -- On Time
+(4, '2024-10-06', '16:30:00', '16:30:00'); -- On Time
+
+-- Data for 2024-10-07
+INSERT INTO train_bookings (train_id, booking_date, departure_date, booked_1st_class, booked_2nd_class, booked_3rd_class) VALUES
+(1, '2024-10-01', '2024-10-07', 50, 100, 200), -- Full
+(2, '2024-10-02', '2024-10-07', 40, 80, 180),  -- Full
+(3, '2024-10-03', '2024-10-07', 35, 70, 150),
+(4, '2024-10-04', '2024-10-07', 30, 65, 140);
+
+INSERT INTO train_departures (train_id, departure_date, scheduled_departure_time, actual_departure_time) VALUES
+(1, '2024-10-07', '06:00:00', '06:12:00'), -- 12 mins delay
+(2, '2024-10-07', '07:30:00', '07:30:00'), -- On Time
+(3, '2024-10-07', '14:00:00', '14:00:00'), -- On Time
+(4, '2024-10-07', '16:30:00', '16:48:00'); -- 18 mins delay
+
+-- Data for 2024-10-08
+INSERT INTO train_bookings (train_id, booking_date, departure_date, booked_1st_class, booked_2nd_class, booked_3rd_class) VALUES
+(1, '2024-10-02', '2024-10-08', 30, 60, 120),
+(2, '2024-10-03', '2024-10-08', 25, 50, 110),
+(3, '2024-10-04', '2024-10-08', 40, 80, 160),
+(4, '2024-10-05', '2024-10-08', 35, 70, 150);
+
+INSERT INTO train_departures (train_id, departure_date, scheduled_departure_time, actual_departure_time) VALUES
+(1, '2024-10-08', '06:00:00', '06:00:00'), -- On Time
+(2, '2024-10-08', '07:30:00', '07:30:00'), -- On Time
+(3, '2024-10-08', '14:00:00', '14:07:00'), -- 7 mins delay
+(4, '2024-10-08', '16:30:00', '16:30:00'); -- On Time
+
+-- Data for 2024-10-09
+INSERT INTO train_bookings (train_id, booking_date, departure_date, booked_1st_class, booked_2nd_class, booked_3rd_class) VALUES
+(1, '2024-10-03', '2024-10-09', 48, 95, 190),
+(2, '2024-10-04', '2024-10-09', 39, 78, 175),
+(3, '2024-10-05', '2024-10-09', 42, 88, 178),
+(4, '2024-10-06', '2024-10-09', 37, 74, 168);
+
+INSERT INTO train_departures (train_id, departure_date, scheduled_departure_time, actual_departure_time) VALUES
+(1, '2024-10-09', '06:00:00', '06:18:00'), -- 18 mins delay
+(2, '2024-10-09', '07:30:00', '07:30:00'), -- On Time
+(3, '2024-10-09', '14:00:00', '14:00:00'), -- On Time
+(4, '2024-10-09', '16:30:00', '16:30:00'); -- On Time
+
+-- Data for 2024-10-10
+INSERT INTO train_bookings (train_id, booking_date, departure_date, booked_1st_class, booked_2nd_class, booked_3rd_class) VALUES
+(1, '2024-10-04', '2024-10-10', 40, 80, 160),
+(2, '2024-10-05', '2024-10-10', 30, 60, 130),
+(3, '2024-10-06', '2024-10-10', 45, 90, 180),
+(4, '2024-10-07', '2024-10-10', 38, 75, 165);
+
+INSERT INTO train_departures (train_id, departure_date, scheduled_departure_time, actual_departure_time) VALUES
+(1, '2024-10-10', '06:00:00', '06:00:00'), -- On Time
+(2, '2024-10-10', '07:30:00', '07:39:00'), -- 9 mins delay
+(3, '2024-10-10', '14:00:00', '14:00:00'), -- On Time
+(4, '2024-10-10', '16:30:00', '16:30:00'); -- On Time
+
+-- Data for 2024-10-11
+INSERT INTO train_bookings (train_id, booking_date, departure_date, booked_1st_class, booked_2nd_class, booked_3rd_class) VALUES
+(1, '2024-10-05', '2024-10-11', 50, 100, 200), -- Full
+(2, '2024-10-06', '2024-10-11', 40, 80, 180),  -- Full
+(3, '2024-10-07', '2024-10-11', 35, 70, 150),
+(4, '2024-10-08', '2024-10-11', 30, 65, 140);
+
+INSERT INTO train_departures (train_id, departure_date, scheduled_departure_time, actual_departure_time) VALUES
+(1, '2024-10-11', '06:00:00', '06:00:00'), -- On Time
+(2, '2024-10-11', '07:30:00', '07:30:00'), -- On Time
+(3, '2024-10-11', '14:00:00', '14:11:00'), -- 11 mins delay
+(4, '2024-10-11', '16:30:00', '16:30:00'); -- On Time
+
+-- Data for 2024-10-12
+INSERT INTO train_bookings (train_id, booking_date, departure_date, booked_1st_class, booked_2nd_class, booked_3rd_class) VALUES
+(1, '2024-10-06', '2024-10-12', 30, 60, 120),
+(2, '2024-10-07', '2024-10-12', 25, 50, 110),
+(3, '2024-10-08', '2024-10-12', 40, 80, 160),
+(4, '2024-10-09', '2024-10-12', 35, 70, 150);
+
+INSERT INTO train_departures (train_id, departure_date, scheduled_departure_time, actual_departure_time) VALUES
+(1, '2024-10-12', '06:00:00', '06:00:00'), -- On Time
+(2, '2024-10-12', '07:30:00', '07:30:00'), -- On Time
+(3, '2024-10-12', '14:00:00', '14:00:00'), -- On Time
+(4, '2024-10-12', '16:30:00', '16:55:00'); -- 25 mins delay (larger delay example)
+
+-- Data for 2024-10-13
+INSERT INTO train_bookings (train_id, booking_date, departure_date, booked_1st_class, booked_2nd_class, booked_3rd_class) VALUES
+(1, '2024-10-07', '2024-10-13', 48, 95, 190),
+(2, '2024-10-08', '2024-10-13', 39, 78, 175),
+(3, '2024-10-09', '2024-10-13', 42, 88, 178),
+(4, '2024-10-10', '2024-10-13', 37, 74, 168);
+
+INSERT INTO train_departures (train_id, departure_date, scheduled_departure_time, actual_departure_time) VALUES
+(1, '2024-10-13', '06:00:00', '06:00:00'), -- On Time
+(2, '2024-10-13', '07:30:00', '07:30:00'), -- On Time
+(3, '2024-10-13', '14:00:00', '14:13:00'), -- 13 mins delay
+(4, '2024-10-13', '16:30:00', '16:30:00'); -- On Time
+
+-- Data for 2024-10-14
+INSERT INTO train_bookings (train_id, booking_date, departure_date, booked_1st_class, booked_2nd_class, booked_3rd_class) VALUES
+(1, '2024-10-08', '2024-10-14', 40, 80, 160),
+(2, '2024-10-09', '2024-10-14', 30, 60, 130),
+(3, '2024-10-10', '2024-10-14', 45, 90, 180),
+(4, '2024-10-11', '2024-10-14', 38, 75, 165);
+
+INSERT INTO train_departures (train_id, departure_date, scheduled_departure_time, actual_departure_time) VALUES
+(1, '2024-10-14', '06:00:00', '06:08:00'), -- 8 mins delay
+(2, '2024-10-14', '07:30:00', '07:30:00'), -- On Time
+(3, '2024-10-14', '14:00:00', '14:00:00'), -- On Time
+(4, '2024-10-14', '16:30:00', '16:30:00'); -- On Time
+
+-- Data for 2024-10-15
+INSERT INTO train_bookings (train_id, booking_date, departure_date, booked_1st_class, booked_2nd_class, booked_3rd_class) VALUES
+(1, '2024-10-09', '2024-10-15', 50, 100, 200), -- Full
+(2, '2024-10-10', '2024-10-15', 40, 80, 180),  -- Full
+(3, '2024-10-11', '2024-10-15', 35, 70, 150),
+(4, '2024-10-12', '2024-10-15', 30, 65, 140);
+
+INSERT INTO train_departures (train_id, departure_date, scheduled_departure_time, actual_departure_time) VALUES
+(1, '2024-10-15', '06:00:00', '06:00:00'), -- On Time
+(2, '2024-10-15', '07:30:00', '07:30:00'), -- On Time
+(3, '2024-10-15', '14:00:00', '14:00:00'), -- On Time
+(4, '2024-10-15', '16:30:00', '16:42:00'); -- 12 mins delay

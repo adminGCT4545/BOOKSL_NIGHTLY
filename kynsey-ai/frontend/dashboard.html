@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - BookSL Train Management</title>
+  <script src="layout.js" type="module"></script>
+</head>
+<body>
+  <div id="app"></div>
+  
+  <script type="module">
+    import renderLayout from './layout.js';
+    
+    // Fetch dashboard data
+    async function fetchDashboardData() {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const year = urlParams.get('year') || 'all';
+        const metric = urlParams.get('metric') || 'occupancy';
+        
+        const response = await fetch(`/api/dashboard?year=${year}&metric=${metric}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        return null;
+      }
+    }
+    
+    // Prepare train metric data for charts
+    function prepareTrainMetricData(summaryStats, selectedMetric) {
+      const result = [];
+      
+      if (summaryStats && summaryStats.trainStats) {
+        for (const train in summaryStats.trainStats) {
+          let value = 0;
+          
+          if (selectedMetric === 'occupancy') {
+            value = summaryStats.trainStats[train].avgOccupancyRate;
+          } else if (selectedMetric === 'delay') {
+            value = summaryStats.trainStats[train].avgDelay;
+          } else if (selectedMetric === 'revenue') {
+            value = summaryStats.trainStats[train].totalRevenue;
+          }
+          
+          result.push({
+            train: train,
+            value: value
+          });
+        }
+      }
+      
+      return result;
+    }
+    
+    // Prepare delay trend data for charts
+    function prepareDelayTrendData(summaryStats) {
+      const result = [];
+      const allMonths = new Set();
+      
+      // Combine all months from all trains to get a complete list
+      if (summaryStats && summaryStats.trainStats) {
+        for (const train in summaryStats.trainStats) {
+          for (const item of summaryStats.trainStats[train].delayTrend) {
+            allMonths.add(item.month);
+          }
+        }
+      }
+      
+      // Create data points for all months and trains
+      const sortedMonths = Array.from(allMonths).sort();
+      
+      for (const month of sortedMonths) {
+        const dataPoint = { month };
+        
+        if (summaryStats && summaryStats.trainStats) {
+          for (const train in summaryStats.trainStats) {
+            let found = false;
+            for (const item of summaryStats.trainStats[train].delayTrend) {
+              if (item.month === month) {
+                dataPoint[train] = item.avgDelay || 0;
+                found = true;
+                break;
+              }
+            }
+            
+            if (!found) {
+              dataPoint[train] = 0;
+            }
+          }
+        }
+        
+        result.push(dataPoint);
+      }
+      
+      return result;
+    }
+    
+    // Prepare city pair data for charts
+    function prepareCityPairData(summaryStats) {
+      const result = [];
+      
+      if (summaryStats && summaryStats.cityPairStats) {
+        for (const cityPair in summaryStats.cityPairStats) {
+          result.push({
+            cityPair: cityPair,
+            avgDelay: summaryStats.cityPairStats[cityPair].avgDelay,
+            totalRevenue: summaryStats.cityPairStats[cityPair].totalRevenue
+          });
+        }
+        
+        // Sort by average delay
+        result.sort((a, b) => b.avgDelay - a.avgDelay);
+      }
+      
+      return result.slice(0, 5); // Top 5 city pairs by delay
+    }
+    
+    // Prepare class data for charts
+    function prepareClassData(summaryStats) {
+      const result = [];
+      
+      if (summaryStats && summaryStats.classStats) {
+        for (const className in summaryStats.classStats) {
+          result.push({
+            name: className,
+            value: summaryStats.classStats[className].totalRevenue
+          });
+        }
+      }
+      
+      return result;
+    }
+    
+    // Format number with commas
+    function formatNumber(number) {
+      return number.toLocaleString('en-US');
+    }
+    
+    // Render dashboard
+    async function renderDashboard() {
+      const dashboardData = await fetchDashboardData();
+      
+      if (!dashboardData) {
+        document.getElementById('app').innerHTML = renderLayout(
+          'Dashboard - BookSL Train Management',
+          'dashboard',
+          '<div class="p-4"><div class="bg-red-500 text-white p-4 rounded">Error loading dashboard data</div></div>'
+        );
+        return;
+      }
+      
+      const { selectedYear, selectedMetric, availableYears, upcomingDepartures, summaryStats, filteredData } = dashboardData;
+      
+      // Define colors for charts
+      const trainColors = {
+        '101': '#7e57c2',
+        '102': '#4e7fff',
+        '103': '#b39ddb',
+        '104': '#64b5f6',
+        '105': '#9575cd',
+        '106': '#5c6bc0',
+        '107': '#7986cb',
+        '108': '#4fc3f7'
+      };
+      
+      const colors = ['#7e57c2', '#4e7fff', '#b39ddb', '#64b5f6', '#9575cd', '#5c6bc0', '#7986cb', '#4fc3f7'];
+      
+      // Prepare chart data
+      const trainMetricData = prepareTrainMetricData(summaryStats, selectedMetric);
+      const delayTrendData = prepareDelayTrendData(summaryStats);
+      const cityPairData = prepareCityPairData(summaryStats);
+      const classData = prepareClassData(summaryStats);
+      
+      // Build dashboard content
+      const content = `
+        <div class="p-4">
+          <div class="mb-4 px-2 flex justify-between items-center">
+            <h1 class="text-xl font-medium text-dashboard-header">Train Operations Dashboard</h1>
+            <div class="flex items-center space-x-4">
+              <form id="filterForm" method="GET" class="flex items-center space-x-4">
+                <div>
+                  <label for="metricSelect" class="text-dashboard-subtext mr-2 text-sm">Metric:</label>
+                  <select 
+                    id="metricSelect"
+                    name="metric"
+                    class="bg-dashboard-dark text-dashboard-text border border-gray-700 rounded px-2 py-1 text-sm"
+                  >
+                    <option value="occupancy" ${selectedMetric === 'occupancy' ? 'selected' : ''}>Occupancy Rate</option>
+                    <option value="delay" ${selectedMetric === 'delay' ? 'selected' : ''}>Delay</option>
+                    <option value="revenue" ${selectedMetric === 'revenue' ? 'selected' : ''}>Revenue</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="yearSelect" class="text-dashboard-subtext mr-2 text-sm">Year:</label>
+                  <select 
+                    id="yearSelect"
+                    name="year"
+                    class="bg-dashboard-dark text-dashboard-text border border-gray-700 rounded px-2 py-1 text-sm"
+                  >
+                    <option value="all" ${selectedYear === 'all' ? 'selected' : ''}>All Years</option>
+                    ${availableYears.map(year => `
+                      <option value="${year}" ${selectedYear == year ? 'selected' : ''}>${year}</option>
+                    `).join('')}
+                  </select>
+                </div>
+              </form>
+            </div>
+          </div>
+          
+          <!-- Main Dashboard Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <!-- Train Schedule & Status Panel -->
+            <div class="bg-dashboard-panel rounded shadow p-4">
+              <h2 class="text-dashboard-header text-lg mb-4">Train Schedule & Status</h2>
+              
+              <div class="mb-4">
+                <h3 class="text-dashboard-subtext text-sm mb-2">Upcoming Departures</h3>
+                <div class="bg-dashboard-dark rounded p-2">
+                  <table class="w-full text-dashboard-text text-sm">
+                    <thead>
+                      <tr class="border-b border-gray-700">
+                        <th class="text-left py-2">Train</th>
+                        <th class="text-left py-2">Route</th>
+                        <th class="text-right py-2">Time</th>
+                        <th class="text-right py-2">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${upcomingDepartures.map(train => `
+                        <tr>
+                          <td class="py-2">${train.train_name}</td>
+                          <td class="py-2">${train.from_city} → ${train.to_city}</td>
+                          <td class="py-2 text-right">${train.scheduled_time}</td>
+                          <td class="py-2 text-right ${train.delay_minutes > 0 ? 'text-yellow-400' : 'text-green-400'}">
+                            ${train.delay_minutes > 0 ? `Delayed ${train.delay_minutes}m` : 'On Time'}
+                          </td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+              <div class="mb-4">
+                <h3 class="text-dashboard-subtext text-sm mb-2">Delay by Train</h3>
+                <div style="height: 180px;">
+                  <canvas class="bar-chart" data-chart='${JSON.stringify({
+                    labels: trainMetricData.filter(item => selectedMetric === 'delay').map(item => item.train),
+                    values: trainMetricData.filter(item => selectedMetric === 'delay').map(item => item.value),
+                    label: "Avg. Delay (minutes)",
+                    colors: trainMetricData.filter(item => selectedMetric === 'delay').map(item => trainColors[item.train] || '#7e57c2')
+                  })}'></canvas>
+                </div>
+              </div>
+              
+              <div class="mt-4">
+                <h3 class="text-dashboard-subtext text-sm mb-2">Route Performance</h3>
+                <div class="bg-dashboard-dark rounded p-2">
+                  <table class="w-full text-dashboard-text text-sm">
+                    <thead>
+                      <tr class="border-b border-gray-700">
+                        <th class="text-left py-2">Route</th>
+                        <th class="text-right py-2">Avg. Delay</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${Object.entries(summaryStats.cityPairStats).map(([cityPair, stats]) => `
+                        <tr>
+                          <td class="py-2">${cityPair}</td>
+                          <td class="py-2 text-right">${stats.avgDelay.toFixed(1)} min</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Ticket Sales & Revenue Panel -->
+            <div class="bg-dashboard-panel rounded shadow p-4">
+              <h2 class="text-dashboard-header text-lg mb-4">Ticket Sales & Revenue</h2>
+              
+              <div class="mb-4">
+                <h3 class="text-dashboard-subtext text-sm mb-2">Revenue by Train</h3>
+                <div style="height: 180px;">
+                  <canvas class="bar-chart" data-chart='${JSON.stringify({
+                    labels: trainMetricData.filter(item => selectedMetric === 'revenue').map(item => item.train),
+                    values: trainMetricData.filter(item => selectedMetric === 'revenue').map(item => item.value),
+                    label: "Revenue (LKR)",
+                    colors: trainMetricData.filter(item => selectedMetric === 'revenue').map(item => trainColors[item.train] || '#7e57c2')
+                  })}'></canvas>
+                </div>
+              </div>
+              
+              <div class="mb-4">
+                <h3 class="text-dashboard-subtext text-sm mb-2">Revenue by Class</h3>
+                <div style="height: 180px;">
+                  <canvas class="pie-chart" data-chart='${JSON.stringify({
+                    labels: classData.map(item => item.name),
+                    values: classData.map(item => item.value),
+                    colors: colors.slice(0, classData.length)
+                  })}'></canvas>
+                </div>
+              </div>
+              
+              <div class="mt-4">
+                <h3 class="text-dashboard-subtext text-sm mb-2">Revenue Summary</h3>
+                <div class="bg-dashboard-dark rounded p-3">
+                  <div class="flex justify-between mb-2">
+                    <span class="text-dashboard-subtext">Total Revenue</span>
+                    <span class="text-dashboard-text">${formatNumber(summaryStats.totalRevenue)} LKR</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-dashboard-subtext">Avg. Revenue per Trip</span>
+                    <span class="text-dashboard-text">
+                      ${formatNumber(summaryStats.totalRevenue / filteredData.length)} LKR
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Occupancy & Capacity Panel -->
+            <div class="bg-dashboard-panel rounded shadow p-4">
+              <h2 class="text-dashboard-header text-lg mb-4">Occupancy & Capacity</h2>
+              
+              <div class="mb-6">
+                <h3 class="text-dashboard-subtext text-sm mb-2">Overall Occupancy Rate</h3>
+                <div class="w-full bg-gray-700 rounded-full h-4 mb-4">
+                  <div 
+                    class="bg-green-400 h-4 rounded-full" 
+                    style="width: ${summaryStats.averageOccupancyRate}%"
+                  ></div>
+                </div>
+                
+                <div class="bg-dashboard-dark rounded">
+                  <div class="grid grid-cols-2 border-b border-gray-700">
+                    <div class="p-2 text-dashboard-subtext">Average Occupancy</div>
+                    <div class="p-2 text-dashboard-text text-right">${summaryStats.averageOccupancyRate.toFixed(1)}%</div>
+                  </div>
+                  ${Object.entries(summaryStats.trainStats).map(([train, stats]) => `
+                    <div class="grid grid-cols-2 border-b border-gray-700">
+                      <div class="p-2 text-dashboard-subtext">Train ${train}</div>
+                      <div class="p-2 text-dashboard-text text-right">${stats.avgOccupancyRate.toFixed(1)}%</div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+              
+              <div class="mt-4">
+                <h3 class="text-dashboard-subtext text-sm mb-2">Occupancy by Train</h3>
+                <div style="height: 180px;">
+                  <canvas class="bar-chart" data-chart='${JSON.stringify({
+                    labels: trainMetricData.filter(item => selectedMetric === 'occupancy').map(item => item.train),
+                    values: trainMetricData.filter(item => selectedMetric === 'occupancy').map(item => item.value),
+                    label: "Occupancy Rate (%)",
+                    colors: trainMetricData.filter(item => selectedMetric === 'occupancy').map(item => trainColors[item.train] || '#7e57c2')
+                  })}'></canvas>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Performance Metrics Panel -->
+            <div class="bg-dashboard-panel rounded shadow p-4">
+              <h2 class="text-dashboard-header text-lg mb-4">Performance Metrics</h2>
+              
+              <div class="mb-6">
+                <h3 class="text-dashboard-subtext text-sm mb-2">Delay Trend</h3>
+                <div style="height: 180px;">
+                  ${(() => {
+                    // Prepare data for line chart
+                    const lineChartData = {
+                      labels: delayTrendData.map(item => item.month),
+                      datasets: []
+                    };
+                    
+                    for (const train in summaryStats.trainStats) {
+                      const values = [];
+                      for (const dataPoint of delayTrendData) {
+                        values.push(dataPoint[train] || 0);
+                      }
+                      
+                      lineChartData.datasets.push({
+                        label: `Train ${train}`,
+                        values: values,
+                        color: trainColors[train] || null
+                      });
+                    }
+                    
+                    return `<canvas class="line-chart" data-chart='${JSON.stringify(lineChartData)}'></canvas>`;
+                  })()}
+                </div>
+              </div>
+              
+              <div class="mt-4">
+                <h3 class="text-dashboard-subtext text-sm mb-2">Key Performance Indicators</h3>
+                <div class="bg-dashboard-dark rounded">
+                  <div class="grid grid-cols-2 border-b border-gray-700">
+                    <div class="p-2 text-dashboard-subtext">On-Time Performance</div>
+                    <div class="p-2 text-dashboard-text text-right">
+                      ${(filteredData.filter(train => train.delay_minutes === 0).length / filteredData.length * 100).toFixed(1)}%
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 border-b border-gray-700">
+                    <div class="p-2 text-dashboard-subtext">Avg. Delay</div>
+                    <div class="p-2 text-dashboard-text text-right">${summaryStats.averageDelay.toFixed(1)} min</div>
+                  </div>
+                  <div class="grid grid-cols-2 border-b border-gray-700">
+                    <div class="p-2 text-dashboard-subtext">Total Trips</div>
+                    <div class="p-2 text-dashboard-text text-right">${filteredData.length}</div>
+                  </div>
+                  <div class="grid grid-cols-2">
+                    <div class="p-2 text-dashboard-subtext">Total Passengers</div>
+                    <div class="p-2 text-dashboard-text text-right">
+                      ${formatNumber(filteredData.reduce((sum, item) => sum + item.occupancy, 0))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('app').innerHTML = renderLayout('Dashboard - BookSL Train Management', 'dashboard', content);
+    }
+    
+    // Render the dashboard
+    renderDashboard();
+  </script>
+</body>
+</html>

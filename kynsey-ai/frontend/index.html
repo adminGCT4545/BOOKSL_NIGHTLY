@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KYNSEY AI - Green Chip Technology</title>
+    <style>
+        /* Modern Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            height: 100vh;
+            display: flex;
+            background-color: #121212;
+            color: #ffffff;
+        }
+
+        /* Header - Modern Dark Style */
+        .header {
+            background-color: #202124;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .hamburger-menu {
+            cursor: pointer;
+            padding-right: 1rem;
+        }
+
+        .hamburger-menu::before {
+            content: "☰";
+            font-size: 1.5rem;
+        }
+
+        .app-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .app-subtitle {
+            font-size: 0.8rem;
+            color: #9aa0a6;
+        }
+
+        /* Sidebar - Dark and Minimal */
+        .sidebar {
+            width: 60px;
+            background-color: #202124;
+            padding: 1rem 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 1px 0 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .sidebar-button {
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.8;
+            transition: opacity 0.2s ease;
+        }
+
+        .sidebar-button:hover {
+            opacity: 1;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-button i, .sidebar-button span {
+            font-size: 1.2rem;
+        }
+
+        /* Main Content Area - Dark Theme Chat */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-container {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            padding: 0.8rem 1.2rem;
+            border-radius: 1rem;
+            max-width: 80%;
+            clear: both;
+            word-wrap: break-word; /* Ensure long words break */
+            white-space: pre-wrap; /* Preserve whitespace and wrap */
+        }
+
+        .user-message {
+            background-color: #0b84ff;
+            color: white;
+            margin-left: auto;
+            text-align: left; /* Align text left even in right-aligned bubble */
+            align-self: flex-end; /* Align bubble to the right */
+        }
+
+        .assistant-message {
+            background-color: #292a2d;
+            color: #e8e8e8;
+            align-self: flex-start;
+        }
+
+        .assistant-message img {
+            max-width: 100%;
+            border-radius: 0.5rem;
+            margin-top: 0.5rem;
+            display: block; /* Ensure image takes block space */
+        }
+
+        /* Typing indicator */
+        .typing-indicator {
+            font-style: italic;
+            color: #9aa0a6;
+        }
+
+        /* Settings Panel */
+        .settings-panel {
+            position: fixed;
+            top: 0;
+            right: -300px;
+            width: 300px;
+            height: 100vh;
+            background-color: #202124;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.5);
+            transition: right 0.3s ease;
+            z-index: 1000;
+            padding: 1.5rem;
+            color: #ffffff; /* Ensure text is visible */
+        }
+
+        .settings-panel.active {
+            right: 0;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .settings-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .close-settings {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .settings-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .settings-section-title {
+            font-size: 0.9rem;
+            color: #9aa0a6;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase; /* Style consistency */
+        }
+
+        .settings-option {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 0;
+            cursor: pointer;
+        }
+         .settings-option label {
+            margin-left: 0.5rem; /* Spacing between radio and label */
+            cursor: pointer;
+        }
+
+        .settings-option input[type="radio"] {
+            margin-right: 0.5rem;
+             cursor: pointer;
+             /* Custom radio button style (optional) */
+             appearance: none;
+             background-color: #3d3d3e;
+             border: 1px solid #5f6368;
+             width: 16px;
+             height: 16px;
+             border-radius: 50%;
+             display: inline-block;
+             position: relative;
+        }
+         .settings-option input[type="radio"]:checked {
+            background-color: #0b84ff;
+            border-color: #0b84ff;
+        }
+
+         .settings-option input[type="radio"]:checked::after {
+            content: '';
+            display: block;
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+
+        #activeModelDisplay {
+            padding: 0.5rem;
+            background-color: #3d3d3e;
+            border-radius: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        /* Image Upload Modal */
+        .image-upload-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+        }
+
+        .image-upload-modal.active {
+            display: flex; /* Show when active */
+        }
+
+        .modal-content {
+            background-color: #202124;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            width: 90%;
+            max-width: 500px;
+            color: #ffffff; /* Ensure text is visible */
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .image-upload-area {
+            border: 2px dashed #3d3d3e;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 1rem;
+            transition: border-color 0.2s ease; /* Smooth transition */
+        }
+
+        .image-upload-area:hover {
+            border-color: #0b84ff;
+        }
+
+        .image-upload-text {
+            color: #9aa0a6;
+            margin-bottom: 1rem;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 200px;
+            margin: 1rem auto; /* Center preview */
+            display: none; /* Hidden until image selected */
+            border-radius: 0.25rem; /* Slight rounding */
+        }
+
+        .image-upload-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            margin-top: 1rem; /* Add space above buttons */
+        }
+
+        .upload-button, .cancel-button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            border: none;
+            font-weight: 500; /* Slightly bolder text */
+            transition: background-color 0.2s ease; /* Smooth transition */
+        }
+
+        .upload-button {
+            background-color: #0b84ff;
+            color: white;
+        }
+        .upload-button:hover {
+            background-color: #005ec4;
+        }
+        .upload-button:disabled {
+             background-color: #3d3d3e;
+             cursor: not-allowed;
+             opacity: 0.7;
+        }
+
+
+        .cancel-button {
+            background-color: #3d3d3e;
+            color: white;
+        }
+         .cancel-button:hover {
+            background-color: #5f6368;
+        }
+
+        /* Input Container - Dark Style */
+        .input-container {
+            background-color: #202124;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .input-form {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end; /* Align items to bottom for multi-line textarea */
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid #3d3d3e;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            resize: none;
+            background-color: #121212;
+            color: #ffffff;
+            max-height: 150px; /* Limit max height */
+            overflow-y: auto; /* Add scroll if needed */
+            line-height: 1.4; /* Improve readability */
+        }
+
+        .message-input:focus {
+            outline: none;
+            border-color: #0b84ff;
+            box-shadow: 0 0 0 1px #0b84ff;
+        }
+
+        .send-button {
+            padding: 0.75rem 1.5rem;
+            background-color: #0b84ff;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s ease;
+            height: calc(1.5rem + 2 * 0.75rem); /* Match initial textarea height */
+            align-self: flex-end; /* Keep button aligned to bottom */
+        }
+
+        .send-button:hover {
+            background-color: #005ec4;
+        }
+        .send-button:disabled {
+             background-color: #3d3d3e;
+             cursor: not-allowed;
+             opacity: 0.7;
+        }
+
+        /* File input hidden */
+        #imageFileInput {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <button class="sidebar-button" id="expandMenu" title="Expand menu"><span>&#9776;</span></button>
+        <button class="sidebar-button" id="newChat" title="New Chat"><span>+</span></button>
+        <button class="sidebar-button" id="documentsBtn" title="Documents (Not Implemented)"><span>&#128196;</span></button>
+        <button class="sidebar-button" id="imagesBtn" title="Upload Image"><span>&#128249;</span></button>
+        <button class="sidebar-button" id="settingsBtn" title="Settings"><span>&#9881;</span></button>
+    </div>
+
+    <div class="main-content">
+        <header class="header">
+            <div class="header-left">
+                <!-- Hamburger can be implemented later if needed -->
+                <!-- <div class="hamburger-menu" id="hamburgerMenu"></div> -->
+                <div class="app-info">
+                    <h1 class="app-title">KYNSEY AI</h1>
+                    <p class="app-subtitle">Green Chip Technology</p>
+                </div>
+            </div>
+            <div>
+                <!-- Additional header elements can go here -->
+            </div>
+        </header>
+
+        <main class="chat-container" id="chatContainer">
+            <!-- Initial welcome message will be added by JS -->
+        </main>
+
+        <div class="input-container">
+            <form class="input-form" id="chatForm">
+                <textarea
+                    class="message-input"
+                    id="messageInput"
+                    placeholder="Type your message here..."
+                    rows="1"
+                ></textarea>
+                <button type="submit" class="send-button" id="sendButton">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-header">
+            <h2 class="settings-title">Settings</h2>
+            <button class="close-settings" id="closeSettings">&times;</button>
+        </div>
+        <div class="settings-section">
+            <h3 class="settings-section-title">RESPONSE STYLE</h3>
+            <div class="settings-option">
+                <input type="radio" id="professionalStyle" name="responseStyle" value="professional">
+                <label for="professionalStyle">Professional</label>
+            </div>
+            <div class="settings-option">
+                <input type="radio" id="conciseStyle" name="responseStyle" value="concise">
+                <label for="conciseStyle">Concise</label>
+            </div>
+            <div class="settings-option">
+                <input type="radio" id="normalStyle" name="responseStyle" value="normal" checked>
+                <label for="normalStyle">Normal</label>
+            </div>
+        </div>
+        <div class="settings-section">
+            <h3 class="settings-section-title">ACTIVE MODEL</h3>
+            <!-- Model display can be updated dynamically if needed -->
+            <div id="activeModelDisplay">llama3.2:3b-instruct-fp16</div>
+        </div>
+        <div class="settings-section">
+            <h3 class="settings-section-title">CONVERSATION HISTORY</h3>
+            <button id="clearHistory" style="padding: 0.5rem 1rem; background-color: #dc3545; color: white; border: none; border-radius: 0.25rem; cursor: pointer; width: 100%;">
+                Clear Conversation History
+            </button>
+        </div>
+         <div class="settings-section">
+            <h3 class="settings-section-title">ADMIN</h3>
+             <button id="goToAdmin" style="padding: 0.5rem 1rem; background-color: #3d3d3e; color: white; border: none; border-radius: 0.25rem; cursor: pointer; width: 100%;" onclick="window.location.href='admin_panel.html'">
+                Go to Admin Panel
+            </button>
+        </div>
+    </div>
+
+    <!-- Image Upload Modal -->
+    <div class="image-upload-modal" id="imageUploadModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Upload Image</h2>
+                <button class="close-modal" id="closeImageModal">&times;</button>
+            </div>
+            <div class="image-upload-area" id="dropArea">
+                <p class="image-upload-text">Drag & drop an image or click to browse</p>
+                <input type="file" id="imageFileInput" accept="image/jpeg, image/png, image/gif, image/webp">
+                <img src="" alt="Preview" class="image-preview" id="imagePreview">
+            </div>
+            <div class="image-upload-buttons">
+                <button class="cancel-button" id="cancelUpload">Cancel</button>
+                <button class="upload-button" id="confirmUpload" disabled>Upload</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const chatForm = document.getElementById('chatForm');
+        const messageInput = document.getElementById('messageInput');
+        const chatContainer = document.getElementById('chatContainer');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const closeSettings = document.getElementById('closeSettings');
+        const imagesBtn = document.getElementById('imagesBtn');
+        const imageUploadModal = document.getElementById('imageUploadModal');
+        const closeImageModal = document.getElementById('closeImageModal');
+        const dropArea = document.getElementById('dropArea');
+        const imageFileInput = document.getElementById('imageFileInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const confirmUpload = document.getElementById('confirmUpload');
+        const cancelUpload = document.getElementById('cancelUpload');
+        const clearHistory = document.getElementById('clearHistory');
+        const newChat = document.getElementById('newChat');
+        const responseStyleOptions = document.querySelectorAll('input[name="responseStyle"]');
+        const sendButton = document.getElementById('sendButton');
+        const activeModelDisplay = document.getElementById('activeModelDisplay'); // Added
+
+        // Global variables
+        let selectedImageData = null; // Store base64 data
+        let conversationHistory = [];
+        let currentResponseStyle = 'normal';
+        let isWaitingForResponse = false; // Prevent multiple submissions
+
+        // API endpoint
+        const API_ENDPOINT = 'http://localhost:3002/api/chat'; // Updated to match backend port
+
+        // --- Initialization ---
+        function initializeChat() {
+            // Load history from local storage if available
+            const savedHistory = localStorage.getItem('kynseyConversationHistory');
+            if (savedHistory) {
+                conversationHistory = JSON.parse(savedHistory);
+                renderHistory();
+            } else {
+                 // Add initial welcome message if no history
+                 addMessage('Hello! How can I help you today?', 'assistant-message', false); // Don't save initial message to history yet
+            }
+
+            // Load response style
+            const savedStyle = localStorage.getItem('kynseyResponseStyle');
+            if (savedStyle) {
+                currentResponseStyle = savedStyle;
+                document.querySelector(`input[name="responseStyle"][value="${currentResponseStyle}"]`).checked = true;
+            }
+
+             // Fetch and display active model from backend (optional, could be hardcoded if static)
+             // fetchActiveModel(); // Example function call if needed
+             activeModelDisplay.textContent = 'llama3.2:3b-instruct-fp16'; // Hardcoded for now based on requirements
+        }
+
+        function saveState() {
+             localStorage.setItem('kynseyConversationHistory', JSON.stringify(conversationHistory));
+             localStorage.setItem('kynseyResponseStyle', currentResponseStyle);
+        }
+
+        function renderHistory() {
+            chatContainer.innerHTML = ''; // Clear existing messages
+            conversationHistory.forEach(msg => {
+                addMessage(msg.content, msg.role === 'user' ? 'user-message' : 'assistant-message', false); // Render without saving again
+            });
+        }
+
+        // --- UI Updates ---
+
+        // Auto-resize textarea
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            const scrollHeight = this.scrollHeight;
+            this.style.height = scrollHeight + 'px';
+
+            // Adjust max height if needed, e.g., based on viewport
+            const maxHeight = window.innerHeight * 0.3; // Example: max 30% of viewport height
+            if (scrollHeight > maxHeight) {
+                this.style.height = maxHeight + 'px';
+                this.style.overflowY = 'auto';
+            } else {
+                this.style.overflowY = 'hidden';
+            }
+        });
+
+        // Function to add message to UI
+        function addMessage(text, className, save = true) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', className);
+
+            // Basic Markdown-like handling for images (if backend sends them this way)
+            // A more robust Markdown parser (like Marked.js) would be better for full support
+            if (className === 'assistant-message' && text.includes('![')) {
+                const imgRegex = /!\[.*?\]\((.*?)\)/g;
+                let lastIndex = 0;
+                let match;
+
+                while ((match = imgRegex.exec(text)) !== null) {
+                    // Add text before the image
+                    if (match.index > lastIndex) {
+                        const textNode = document.createTextNode(text.substring(lastIndex, match.index));
+                        messageDiv.appendChild(textNode);
+                    }
+                    // Add the image
+                    const img = document.createElement('img');
+                    img.src = match[1];
+                    img.alt = 'Response image'; // Alt text could be extracted if available: match[0].match(/!\[(.*?)\]/)[1]
+                    messageDiv.appendChild(img);
+                    lastIndex = imgRegex.lastIndex;
+                }
+                // Add any remaining text after the last image
+                if (lastIndex < text.length) {
+                    const textNode = document.createTextNode(text.substring(lastIndex));
+                    messageDiv.appendChild(textNode);
+                }
+            } else {
+                 // For non-assistant messages or messages without images, just set text content
+                 // Use textContent to prevent potential XSS if text is not sanitized
+                 messageDiv.textContent = text;
+            }
+
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight; // Scroll to bottom
+
+            // Save to history and local storage if required
+            if (save) {
+                const role = className === 'user-message' ? 'user' : 'assistant';
+                conversationHistory.push({ role: role, content: text });
+                saveState();
+            }
+        }
+
+        // Function to show typing indicator
+        function showTypingIndicator() {
+            removeTypingIndicator(); // Remove any previous indicator
+            const typingDiv = document.createElement('div');
+            typingDiv.classList.add('message', 'assistant-message', 'typing-indicator');
+            typingDiv.textContent = 'Thinking...'; // Changed text
+            chatContainer.appendChild(typingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            isWaitingForResponse = true;
+            sendButton.disabled = true; // Disable send button
+            messageInput.disabled = true; // Disable input field
+        }
+
+        // Function to remove typing indicator
+        function removeTypingIndicator() {
+            const typingIndicator = chatContainer.querySelector('.typing-indicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+             isWaitingForResponse = false;
+             sendButton.disabled = false; // Re-enable send button
+             messageInput.disabled = false; // Re-enable input field
+             messageInput.focus(); // Focus back on input
+        }
+
+        // --- Event Handlers ---
+
+        // Handle chat form submission
+        chatForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (isWaitingForResponse) return; // Prevent submission while waiting
+
+            const message = messageInput.value.trim();
+
+            if (message || selectedImageData) { // Allow sending if there's text OR an image
+                let userMessageContent = message;
+                if (selectedImageData) {
+                     // Add a note about the image if text is also present
+                     if (message) {
+                         userMessageContent += "\n[Image attached]";
+                     } else {
+                         userMessageContent = "[Image attached]";
+                     }
+                }
+
+                // Add user message to UI immediately
+                addMessage(userMessageContent, 'user-message');
+
+                // Clear input and reset height
+                messageInput.value = '';
+                messageInput.style.height = 'auto';
+                messageInput.dispatchEvent(new Event('input')); // Trigger resize logic
+
+                // Prepare data for API
+                const requestData = {
+                    message: message, // Send original text message
+                    history: conversationHistory.slice(-10), // Send recent history (limit length if needed)
+                    responseStyle: currentResponseStyle,
+                    image: selectedImageData // Send base64 image data
+                };
+
+                // Clear selected image data after preparing request
+                const imageToSend = selectedImageData; // Keep image data for this request
+                selectedImageData = null; // Clear for next message
+
+                try {
+                    showTypingIndicator();
+                    const response = await sendMessageToLLM(requestData, imageToSend); // Pass image data separately if needed by API structure
+                    removeTypingIndicator();
+                    addMessage(response, 'assistant-message');
+                } catch (error) {
+                    console.error('Error:', error);
+                    removeTypingIndicator();
+                    addMessage(`Sorry, there was an error: ${error.message}. Please check the backend connection and try again.`, 'assistant-message');
+                }
+            }
+        });
+
+         // Allow sending with Shift+Enter
+         messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); // Prevent newline
+                chatForm.requestSubmit(); // Trigger form submission
+            }
+        });
+
+
+        // Settings panel handlers
+        settingsBtn.addEventListener('click', () => settingsPanel.classList.add('active'));
+        closeSettings.addEventListener('click', () => settingsPanel.classList.remove('active'));
+
+        // Image upload modal handlers
+        imagesBtn.addEventListener('click', () => {
+            resetImageUpload(); // Reset state when opening modal
+            imageUploadModal.classList.add('active');
+        });
+        closeImageModal.addEventListener('click', () => imageUploadModal.classList.remove('active'));
+        cancelUpload.addEventListener('click', () => imageUploadModal.classList.remove('active'));
+
+        // Handle image upload via click
+        dropArea.addEventListener('click', () => imageFileInput.click());
+
+        // Handle file selection
+        imageFileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        // Handle drag and drop
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.style.borderColor = '#0b84ff';
+        });
+        dropArea.addEventListener('dragleave', () => dropArea.style.borderColor = '#3d3d3e');
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.style.borderColor = '#3d3d3e';
+            handleFiles(e.dataTransfer.files);
+        });
+
+        // Handle the selected files
+        function handleFiles(files) {
+            if (files.length > 0) {
+                const file = files[0];
+                // Add more image types if needed
+                if (file.type.startsWith('image/jpeg') || file.type.startsWith('image/png') || file.type.startsWith('image/gif') || file.type.startsWith('image/webp')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imagePreview.src = e.target.result;
+                        imagePreview.style.display = 'block';
+                        // Store only the base64 part
+                        selectedImageData = e.target.result.split(',')[1];
+                        confirmUpload.disabled = false; // Enable upload button
+                    };
+                    reader.onerror = function(error) {
+                         console.error("FileReader error: ", error);
+                         alert("Error reading file.");
+                         resetImageUpload();
+                    }
+                    reader.readAsDataURL(file); // Read as Base64
+                } else {
+                     alert("Please select a valid image file (JPEG, PNG, GIF, WebP).");
+                     resetImageUpload();
+                }
+            }
+        }
+
+        // Confirm image upload (attaches image data for the *next* message)
+        confirmUpload.addEventListener('click', () => {
+            if (selectedImageData) {
+                // Don't add a message here, the image data is now stored
+                // and will be sent with the next text message submitted by the user.
+                imageUploadModal.classList.remove('active');
+                messageInput.focus(); // Focus input for user to type query about image
+                // Optionally, show a small indicator near the input field that an image is attached
+            }
+        });
+
+        // Reset image upload state
+        function resetImageUpload() {
+            imageFileInput.value = ''; // Clear file input
+            imagePreview.src = '';
+            imagePreview.style.display = 'none';
+            selectedImageData = null;
+            confirmUpload.disabled = true; // Disable upload button
+        }
+
+        // Clear conversation history
+        clearHistory.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear the conversation history? This cannot be undone.')) {
+                conversationHistory = [];
+                chatContainer.innerHTML = ''; // Clear UI
+                addMessage('Hello! How can I help you today?', 'assistant-message', false); // Add welcome message back
+                resetImageUpload();
+                saveState(); // Save the cleared state
+            }
+        });
+
+        // Start a new chat
+        newChat.addEventListener('click', () => {
+            // Only confirm if there's actually history beyond the initial message
+            if (conversationHistory.length > 0 && confirm('Start a new conversation? Your current chat history will be cleared.')) {
+                conversationHistory = [];
+                chatContainer.innerHTML = '';
+                addMessage('Hello! How can I help you today?', 'assistant-message', false);
+                resetImageUpload();
+                saveState();
+            } else if (conversationHistory.length === 0) {
+                 // If already empty, just ensure welcome message is there
+                 chatContainer.innerHTML = '';
+                 addMessage('Hello! How can I help you today?', 'assistant-message', false);
+            }
+        });
+
+        // Response style handlers
+        responseStyleOptions.forEach(option => {
+            option.addEventListener('change', function() {
+                if (this.checked) {
+                    currentResponseStyle = this.value;
+                    console.log('Response style changed to:', currentResponseStyle);
+                    saveState(); // Save selected style
+                }
+            });
+        });
+
+        // --- API Communication ---
+        async function sendMessageToLLM(data, imageBase64 = null) {
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    console.error('API Error Response:', errorBody);
+                    throw new Error(`API request failed with status ${response.status}: ${errorBody || response.statusText}`);
+                }
+
+                // Create a MessageDiv for the assistant's response
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message', 'assistant-message');
+                chatContainer.appendChild(messageDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+
+                let fullResponse = '';
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    
+                    const text = decoder.decode(value);
+                    const lines = text.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                if (data.error) {
+                                    throw new Error(data.error);
+                                }
+                                if (data.response) {
+                                    fullResponse += data.response;
+                                    messageDiv.textContent = fullResponse;
+                                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                                }
+                                if (data.done) {
+                                    return fullResponse;
+                                }
+                            } catch (e) {
+                                console.error('Error parsing SSE data:', e);
+                            }
+                        }
+                    }
+                }
+
+                return fullResponse;
+            } catch (error) {
+                console.error('API Communication Error:', error);
+                throw error;
+            }
+        }
+
+        // --- Global Event Listeners ---
+        // Close settings panel if clicking outside
+        document.addEventListener('click', function(event) {
+            if (!settingsPanel.contains(event.target) && !settingsBtn.contains(event.target) && settingsPanel.classList.contains('active')) {
+                settingsPanel.classList.remove('active');
+            }
+        });
+
+        // Initialize chat on load
+        document.addEventListener('DOMContentLoaded', initializeChat);
+
+    </script>
+</body>
+</html>
