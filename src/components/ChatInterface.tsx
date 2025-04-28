@@ -51,13 +51,24 @@ export const ChatProvider: React.FC<{children: React.ReactNode}> = ({ children }
     });
 
     const handleMessage = (event: MessageEvent) => {
-      const data = JSON.parse(event.data);
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        sender: 'ai',
-        content: data.content,
-        timestamp: new Date()
-      }]);
+      try {
+        const data = JSON.parse(event.data);
+        const content = String(data.content || ''); // Convert to string or use empty string if undefined
+        
+        if (!content) {
+          console.error('Received empty content from server');
+          return;
+        }
+
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          sender: 'ai',
+          content: content,
+          timestamp: new Date(),
+        }]);
+      } catch (error) {
+        console.error('Error processing message:', error);
+      }
     };
 
     const handleError = (err: Event) => {
@@ -185,9 +196,9 @@ const ChatInterface: React.FC = () => {
                     : 'bg-gray-200 text-gray-800 rounded-bl-none'}`}
                 >
                   <p>{message.content}</p>
-                  <p className={`text-xs mt-1 ${message.sender === 'user' ? 'text-blue-200' : 'text-gray-500'}`}>
-                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
+  <p className={`text-xs mt-1 ${message.sender === 'user' ? 'text-blue-200' : 'text-gray-500'}`}>
+    {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+  </p>
                 </div>
               </div>
             ))}
@@ -202,7 +213,7 @@ const ChatInterface: React.FC = () => {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Type your message..."
-            className="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
           />
           <button
             type="submit"

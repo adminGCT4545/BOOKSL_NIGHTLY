@@ -2,11 +2,12 @@ import express from 'express';
 import pg from 'pg';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import llmService from './services/llmService.js';
 
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
 
 // PostgreSQL connection pool
 let pool = null;
@@ -74,13 +75,25 @@ app.post('/api/query', async (req, res) => {
     const { text, params } = req.body;
 
     if (!isPostgresAvailable) {
-      console.log('PostgreSQL not available, using fallback data');
-      // Return mock data based on the query
-      return res.json(fallbackData.trains);
+      console.log('[Database] PostgreSQL not available, using fallback data');
+      // Return mock data with proper query result structure
+      return res.json({
+        rows: fallbackData.trains,
+        command: 'SELECT',
+        rowCount: fallbackData.trains.length,
+        oid: 0,
+        fields: []
+      });
     }
 
     const result = await pool.query(text, params);
-    res.json(result.rows);
+    res.json({
+      rows: result.rows,
+      command: result.command,
+      rowCount: result.rowCount,
+      oid: result.oid,
+      fields: result.fields
+    });
   } catch (err) {
     console.error('Error executing query:', err);
     res.status(500).json({ error: err.message });
@@ -93,15 +106,56 @@ app.get('/api/chat/stream', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   
-  // Send a test message
-  res.write('data: {"message": "Connected to chat stream"}\n\n');
+  // Function to send SSE message
+  const sendMessage = (content) => {
+    const message = {
+      id: Date.now().toString(),
+      sender: 'ai',
+      content: String(content),
+      timestamp: new Date().toISOString()
+    };
+    res.write(`data: ${JSON.stringify(message)}\n\n`);
+  };
+
+  // Store the connection for later use
+  const clientId = Date.now();
+  activeConnections.set(clientId, sendMessage);
+
+  // Send initial connection message
+  sendMessage("Connected to chat stream");
+
+  // Handle client disconnect
+  req.on('close', () => {
+    activeConnections.delete(clientId);
+  });
 });
+
+// Store active SSE connections
+const activeConnections = new Map();
 
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message } = req.body;
-    // For now, just echo back a simple response
-    res.json({ response: "Message received: " + message });
+    const { message, context } = req.body;
+    
+    // Send immediate acknowledgment
+    res.json({ status: 'processing' });
+
+    if (!message || typeof message !== 'string') {
+      throw new Error('Invalid message format');
+    }
+
+    // Generate response using LLM
+    const response = await llmService.generateResponse(message, context);
+
+    // Send response through SSE to all connected clients
+    activeConnections.forEach(sendMessage => {
+      try {
+        sendMessage(response);
+      } catch (err) {
+        console.error('Error sending SSE message:', err);
+        activeConnections.delete(clientId);
+      }
+    });
   } catch (err) {
     console.error('Error in chat endpoint:', err);
     res.status(500).json({ error: err.message });
@@ -114,8 +168,21 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something broke!' });
 });
 
-// Start server
-app.listen(port, () => {
-  console.log(`Backend server running on port ${port}`);
-  console.log(`PostgreSQL status: ${isPostgresAvailable ? 'connected' : 'unavailable (using fallback data)'}`);
-});
+// Start server with LLM initialization
+const startServer = async () => {
+  try {
+    // Initialize LLM service
+    await llmService.initialize();
+    
+    app.listen(port, () => {
+      console.log(`Backend server running on port ${port}`);
+      console.log(`PostgreSQL status: ${isPostgresAvailable ? 'connected' : 'unavailable (using fallback data)'}`);
+      console.log('[LLM] Service status: initialized');
+    });
+  } catch (error) {
+    console.error('[LLM] Failed to initialize:', error);
+    process.exit(1);
+  }
+};
+
+startServer();

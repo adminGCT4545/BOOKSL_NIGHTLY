@@ -53,7 +53,7 @@ export const query = async (text: string, params?: any[]): Promise<QueryResult> 
 
     const rows = await response.json();
     const duration = Date.now() - start;
-    console.log('Executed query', { text, duration, rows: rows.length });
+    console.log(`Executed query - Text: ${text}, Duration: ${duration}ms, Rows: ${rows.length}`);
 
     return {
       rows,
