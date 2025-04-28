@@ -136,29 +136,29 @@ const activeConnections = new Map();
 app.post('/api/chat', async (req, res) => {
   try {
     const { message, context } = req.body;
-    
-    // Send immediate acknowledgment
-    res.json({ status: 'processing' });
 
     if (!message || typeof message !== 'string') {
       throw new Error('Invalid message format');
     }
 
-    // Generate response using LLM
     const response = await llmService.generateResponse(message, context);
-
-    // Send response through SSE to all connected clients
-    activeConnections.forEach(sendMessage => {
-      try {
-        sendMessage(response);
-      } catch (err) {
-        console.error('Error sending SSE message:', err);
-        activeConnections.delete(clientId);
-      }
+    
+    // Send response back directly
+    res.json({
+      id: Date.now().toString(),
+      sender: 'ai',
+      content: response,
+      timestamp: new Date().toISOString()
     });
   } catch (err) {
     console.error('Error in chat endpoint:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ 
+      error: err.message,
+      id: Date.now().toString(),
+      sender: 'ai',
+      content: 'Sorry, I encountered an error processing your request.',
+      timestamp: new Date().toISOString()
+    });
   }
 });
 

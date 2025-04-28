@@ -92,48 +92,56 @@ export const ChatProvider: React.FC<{children: React.ReactNode}> = ({ children }
     };
   }, []);
 
-  const sendMessage = async (content: string) => {
-    if (!content.trim()) return;
+    const sendMessage = async (content: string) => {
+        if (!content.trim()) return;
 
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      sender: 'user',
-      content,
-      timestamp: new Date()
+        const userMessage: ChatMessage = {
+            id: Date.now().toString(),
+            sender: 'user',
+            content,
+            timestamp: new Date()
+        };
+
+        setMessages(prev => [...prev, userMessage]);
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                },
+                body: JSON.stringify({
+                    message: content,
+                    context: {
+                        selectedTrain: dashboardContext?.selectedTrain,
+                        selectedYear: dashboardContext?.selectedYear,
+                        currentMetrics: dashboardContext?.currentMetrics
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to send message');
+            }
+
+            const data = await response.json();
+            setMessages(prev => [...prev, {
+                id: data.id,
+                sender: data.sender as 'user' | 'ai',
+                content: data.content,
+                timestamp: new Date(data.timestamp)
+            }]);
+        } catch (err) {
+            console.error('Error sending message:', err);
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                sender: 'ai',
+                content: 'Sorry, I encountered an error processing your request.',
+                timestamp: new Date()
+            }]);
+        }
     };
-
-    setMessages(prev => [...prev, userMessage]);
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        },
-        body: JSON.stringify({
-          message: content,
-          context: {
-            selectedTrain: dashboardContext?.selectedTrain,
-            selectedYear: dashboardContext?.selectedYear,
-            currentMetrics: dashboardContext?.currentMetrics
-          }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send message');
-      }
-    } catch (err) {
-      console.error('Error sending message:', err);
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        sender: 'ai',
-        content: 'Sorry, I encountered an error processing your request.',
-        timestamp: new Date()
-      }]);
-    }
-  };
 
   const toggleChat = () => setIsOpen(!isOpen);
 

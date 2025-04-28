@@ -8,11 +8,23 @@ class LLMService {
 
     async initialize() {
         try {
-            // Test connection to Ollama API
-            const response = await fetch('http://localhost:11434/api/health');
+            // Test connection by sending a simple query
+            const response = await fetch(this.apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: this.model,
+                    prompt: 'test',
+                    stream: true
+                })
+            });
+
             if (!response.ok) {
-                throw new Error('Ollama API not available');
+                throw new Error(`Ollama API error: ${response.status}`);
             }
+
             console.log('[LLM] Successfully connected to Ollama API');
             return true;
         } catch (error) {
@@ -37,7 +49,7 @@ class LLMService {
                     prompt: `You are a helpful AI assistant specialized in train operations and management. Your responses should be clear, professional, and focused on helping users with their train-related queries.
 
 ${messageWithContext}`,
-                    stream: false
+                    stream: true
                 })
             });
 
@@ -46,7 +58,7 @@ ${messageWithContext}`,
             }
 
             const data = await response.json();
-            return data.response;
+            return data.response || "I am an AI assistant specialized in train operations. How can I help you today?";
         } catch (error) {
             console.error('[LLM] Error generating response:', error);
             throw error;
